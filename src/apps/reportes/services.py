@@ -3,16 +3,19 @@ from apps.turnos.models import Turno
 from apps.caja.models import MovimientoCaja
 
 
-def reporte_turnos(*, usuario):
-    """
-    - ADMIN: ve todos los turnos
-    - EMPLEADO: solo sus turnos
-    """
-
-    if usuario.is_staff:  # ADMIN
+def reporte_turnos(*, usuario, fecha_desde=None, fecha_hasta=None):
+    # ADMIN ve todo, EMPLEADO solo sus turnos
+    if usuario.is_staff:
         turnos = Turno.objects.all()
-    else:  # EMPLEADO
+    else:
         turnos = Turno.objects.filter(usuario=usuario)
+
+    # Filtros por fecha
+    if fecha_desde:
+        turnos = turnos.filter(fecha_inicio__date__gte=fecha_desde)
+
+    if fecha_hasta:
+        turnos = turnos.filter(fecha_inicio__date__lte=fecha_hasta)
 
     turnos = turnos.order_by("-fecha_inicio")
 
@@ -58,3 +61,7 @@ def reporte_turnos(*, usuario):
         })
 
     return reporte
+
+
+
+

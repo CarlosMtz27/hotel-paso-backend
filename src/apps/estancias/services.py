@@ -2,6 +2,8 @@ from django.utils import timezone
 from apps.estancias.models import Estancia
 from apps.caja.models import MovimientoCaja
 from apps.turnos.models import Turno
+from apps.estancias.models import HoraExtra
+
 
 
 def registrar_estancia(
@@ -33,3 +35,35 @@ def registrar_estancia(
         )
 
     return estancia
+
+
+def registrar_horas_extra(
+    *,
+    estancia,
+    turno,
+    cantidad_horas,
+    precio_por_hora,
+    metodo_pago,
+):
+    if not estancia.activa:
+        raise ValueError("La estancia ya fue cerrada")
+
+    precio_total = cantidad_horas * precio_por_hora
+
+    hora_extra = HoraExtra.objects.create(
+        estancia=estancia,
+        turno=turno,
+        cantidad_horas=cantidad_horas,
+        precio_total=precio_total,
+        metodo_pago=metodo_pago,
+    )
+
+    if metodo_pago == "EFECTIVO":
+        MovimientoCaja.objects.create(
+            turno=turno,
+            tipo="EXTRA",
+            monto=precio_total,
+            metodo_pago="EFECTIVO",
+        )
+
+    return hora_extra

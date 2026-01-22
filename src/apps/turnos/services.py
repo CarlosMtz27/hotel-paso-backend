@@ -3,21 +3,28 @@ from .models import Turno
 from apps.caja.models import MovimientoCaja
 from django.db.models import Sum
 from django.utils import timezone
+from django.db import transaction
 
+@transaction.atomic
+def iniciar_turno(*, usuario, tipo_turno, caja_inicial=0, sueldo=0):
+    """
+    Inicia un turno asegurando que solo exista uno activo.
+    """
 
-def iniciar_turno(*, usuario, tipo_turno, sueldo, caja_inicial):
-    if Turno.objects.filter(usuario=usuario, activo=True).exists():
-        raise ValidationError("El usuario ya tiene un turno activo")
+    # 1️⃣ Verificar si ya existe un turno activo
+    if Turno.objects.filter(activo=True).exists():
+        raise ValidationError("Ya existe un turno activo")
 
+    # 2️⃣ Crear el turno
     turno = Turno.objects.create(
         usuario=usuario,
         tipo_turno=tipo_turno,
-        sueldo=sueldo,
         caja_inicial=caja_inicial,
+        sueldo=sueldo,
+        activo=True,
     )
 
     return turno
-
 
 def cerrar_turno(*, usuario, sueldo_reportado, efectivo_reportado):
     try:

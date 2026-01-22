@@ -6,6 +6,15 @@ Usuario = settings.AUTH_USER_MODEL
 
 
 class Turno(models.Model):
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["activo"],
+                condition=models.Q(activo=True),
+                name="unique_turno_activo"
+            )
+        ]
     class TipoTurno(models.TextChoices):
         DIA = "DIA", "Día"
         NOCHE = "NOCHE", "Noche"

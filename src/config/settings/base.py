@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "apps.turnos",
     "apps.caja",
     "apps.estancias",
+    "apps.reportes",
 ]
 
 AUTH_USER_MODEL = "users.Usuario"

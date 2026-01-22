@@ -7,7 +7,7 @@ from .serializers import InicioTurnoSerializer, CerrarTurnoSerializer
 from .services import iniciar_turno
 from .models import Turno
 from rest_framework import status
-from apps.turnos.services import cerrar_turno_service
+from apps.turnos.services import cerrar_turno_service,obtener_resumen_turno
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -45,19 +45,19 @@ class CerrarTurnoAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        turno = cerrar_turno_service(
+        turno, sin_ingresos = cerrar_turno_service(
             turno=turno,
             efectivo_reportado=serializer.validated_data["efectivo_reportado"],
             sueldo=serializer.validated_data["sueldo"],
         )
 
+        resumen = obtener_resumen_turno(turno=turno)
+
         return Response(
             {
                 "mensaje": "Turno cerrado correctamente",
-                "turno_id": turno.id,
-                "efectivo_esperado": turno.efectivo_esperado,
-                "efectivo_reportado": turno.efectivo_reportado,
-                "diferencia": turno.diferencia,
+                "resumen": resumen,
+                "sin_ingresos": sin_ingresos,
             },
-            status=status.HTTP_200_OK
+        status=status.HTTP_200_OK
         )

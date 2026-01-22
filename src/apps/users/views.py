@@ -5,9 +5,10 @@ from django.contrib.auth import login
 from django.contrib.auth.hashers import make_password
 from .models import Usuario
 from .serializers import LoginInvitadoSerializer, LoginSerializer
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
-
-
+@method_decorator(csrf_exempt, name="dispatch")
 class VistaLogin(APIView):
     permission_classes = [AllowAny]
 
@@ -33,7 +34,7 @@ class VistaLogin(APIView):
             "rol": usuario.rol,
         })
 
-
+@method_decorator(csrf_exempt, name="dispatch")
 class VistaLoginInvitado(APIView):
     permission_classes = [AllowAny]
 

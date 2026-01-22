@@ -11,12 +11,13 @@ class InicioTurnoSerializer(serializers.ModelSerializer):
         ]
 
 
-class CierreTurnoSerializer(serializers.Serializer):
-    sueldo_reportado = serializers.DecimalField(
-        max_digits=10,
-        decimal_places=2
-    )
+class CerrarTurnoSerializer(serializers.Serializer):
     efectivo_reportado = serializers.DecimalField(
         max_digits=10,
         decimal_places=2
     )
+    sueldo = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2
+    )
+    

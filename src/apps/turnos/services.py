@@ -33,31 +33,31 @@ def cerrar_turno_service(
     efectivo_reportado,
     sueldo
 ):
-    """
-    Cierra un turno calculando el efectivo esperado.
-    """
-
     if not turno.activo:
         raise ValidationError("El turno ya está cerrado")
+
+    if efectivo_reportado < 0:
+        raise ValidationError("El efectivo reportado no puede ser negativo")
+
+    if sueldo < 0:
+        raise ValidationError("El sueldo no puede ser negativo")
 
     total_efectivo = (
         MovimientoCaja.objects
         .filter(
             turno=turno,
-            metodo_pago=MovimientoCaja.MetodoPago.EFECTIVO
+            metodo_pago="EFECTIVO"
         )
         .aggregate(total=Sum("monto"))["total"]
         or 0
     )
 
-    #Calcular efectivo esperado
     efectivo_esperado = (
         turno.caja_inicial
         + total_efectivo
         - sueldo
     )
 
-    #Cerrar turno usando el modelo
     turno.cerrar_turno(
         efectivo_esperado=efectivo_esperado,
         efectivo_reportado=efectivo_reportado,

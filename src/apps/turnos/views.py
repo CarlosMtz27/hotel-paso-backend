@@ -3,10 +3,11 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from .serializers import InicioTurnoSerializer
+from .serializers import InicioTurnoSerializer, CerrarTurnoSerializer
 from .services import iniciar_turno
-from .serializers import CierreTurnoSerializer
-from .services import cerrar_turno
+from .models import Turno
+from rest_framework import status
+from apps.turnos.services import cerrar_turno_service
 
 
 @method_decorator(csrf_exempt, name="dispatch")
@@ -29,21 +30,34 @@ class IniciarTurnoView(APIView):
         })
 
 
-class CerrarTurnoView(APIView):
+class CerrarTurnoAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        serializer = CierreTurnoSerializer(data=request.data)
+        serializer = CerrarTurnoSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        turno = cerrar_turno(
-            usuario=request.user,
-            **serializer.validated_data
+        try:
+            turno = Turno.objects.get(activo=True)
+        except Turno.DoesNotExist:
+            return Response(
+                {"error": "No hay un turno activo"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        turno = cerrar_turno_service(
+            turno=turno,
+            efectivo_reportado=serializer.validated_data["efectivo_reportado"],
+            sueldo=serializer.validated_data["sueldo"],
         )
 
-        return Response({
-            "mensaje": "Turno cerrado correctamente",
-            "efectivo_esperado": turno.efectivo_esperado,
-            "efectivo_reportado": turno.efectivo_reportado,
-            "diferencia": turno.diferencia,
-        })
+        return Response(
+            {
+                "mensaje": "Turno cerrado correctamente",
+                "turno_id": turno.id,
+                "efectivo_esperado": turno.efectivo_esperado,
+                "efectivo_reportado": turno.efectivo_reportado,
+                "diferencia": turno.diferencia,
+            },
+            status=status.HTTP_200_OK
+        )

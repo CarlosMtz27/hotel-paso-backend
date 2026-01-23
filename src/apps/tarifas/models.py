@@ -81,7 +81,7 @@ class Tarifa(models.Model):
                     "Las tarifas diurnas no deben tener horario nocturno"
                 )
 
-        if not self.tipo_habitacion.activa:
+        if not self.tipo_habitacion.activo:
             raise ValidationError(
                 "No se puede asignar una tarifa a un tipo de habitación inactivo"
             )

@@ -32,6 +32,9 @@ INSTALLED_APPS = [
     "apps.caja",
     "apps.estancias",
     "apps.reportes",
+    "apps.habitaciones",
+    "apps.productos",
+    "apps.tarifas",
 ]
 
 AUTH_USER_MODEL = "users.Usuario"

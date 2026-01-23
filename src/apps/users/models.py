@@ -1,20 +1,29 @@
-from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.db import models
 
-# Create your models here.
+
 class Usuario(AbstractUser):
     class Rol(models.TextChoices):
-        ADMINISTRADOR =  "ADMIN","Administrador"
+        ADMINISTRADOR = "ADMIN", "Administrador"
         EMPLEADO = "EMPLEADO", "Empleado"
         INVITADO = "INVITADO", "Invitado"
 
+    # Rol del sistema (fuente de verdad para permisos)
     rol = models.CharField(
         max_length=20,
         choices=Rol.choices,
         default=Rol.EMPLEADO,
     )
 
+    # Permite desactivar usuarios sin borrarlos
     activo = models.BooleanField(default=True)
 
+    def es_admin(self):
+        return self.rol == self.Rol.ADMINISTRADOR
+
+    def es_empleado(self):
+        return self.rol == self.Rol.EMPLEADO
+
     def __str__(self):
-        return f"{self.username} ({self.rol})"
+        nombre = self.get_full_name()
+        return f"{nombre or self.username} ({self.rol})"

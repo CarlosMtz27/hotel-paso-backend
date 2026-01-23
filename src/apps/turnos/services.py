@@ -1,3 +1,4 @@
+from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Sum
@@ -8,9 +9,9 @@ from apps.caja.models import MovimientoCaja
 
 @transaction.atomic
 def iniciar_turno(*, usuario, tipo_turno, caja_inicial=0, sueldo=0):
-    """
-    Inicia un turno asegurando que solo exista uno activo.
-    """
+
+    if not usuario.has_perm("turnos.abrir_turno"):
+        raise ValidationError("No tienes permiso para abrir turno")
 
     if Turno.objects.filter(activo=True).exists():
         raise ValidationError("Ya existe un turno activo")
@@ -27,39 +28,43 @@ def iniciar_turno(*, usuario, tipo_turno, caja_inicial=0, sueldo=0):
 
 
 @transaction.atomic
-def cerrar_turno_service(
-    *,
-    turno: Turno,
-    efectivo_reportado,
-    sueldo
-):
+def cerrar_turno_service(*, turno, usuario, efectivo_reportado, sueldo):
+    if turno.usuario != usuario:
+        raise ValidationError("No puedes cerrar un turno que no es tuyo")
+
     if not turno.activo:
         raise ValidationError("El turno ya está cerrado")
 
-    total_efectivo = (
-        MovimientoCaja.objects
-        .filter(turno=turno, metodo_pago="EFECTIVO")
-        .aggregate(total=Sum("monto"))["total"]
-        or 0
+    movimientos = MovimientoCaja.objects.filter(turno=turno)
+
+    total_efectivo = movimientos.filter(
+        metodo_pago="EFECTIVO"
+    ).aggregate(total=Sum("monto"))["total"] or 0
+
+    total_ingresos = movimientos.aggregate(
+        total=Sum("monto")
+    )["total"] or 0
+
+    # 👉 bandera de control
+    sin_ingresos = total_ingresos == 0
+
+    if efectivo_reportado is None or efectivo_reportado < 0:
+        raise ValidationError("Efectivo reportado inválido")
+
+    turno.sueldo = sueldo
+    turno.efectivo_reportado = efectivo_reportado
+    turno.efectivo_esperado = (
+        turno.caja_inicial + total_efectivo - sueldo
+    )
+    turno.diferencia = (
+        efectivo_reportado - turno.efectivo_esperado
     )
 
-    total_movimientos = MovimientoCaja.objects.filter(turno=turno).count()
-    sin_ingresos = total_movimientos == 0
-
-    efectivo_esperado = (
-        turno.caja_inicial
-        + total_efectivo
-        - sueldo
-    )
-
-    turno.cerrar_turno(
-        efectivo_esperado=efectivo_esperado,
-        efectivo_reportado=efectivo_reportado,
-        sueldo=sueldo
-    )
+    turno.activo = False
+    turno.fecha_fin = timezone.now()
+    turno.save()
 
     return turno, sin_ingresos
-
 
 
 def obtener_resumen_turno(*, turno):

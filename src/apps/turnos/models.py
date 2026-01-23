@@ -10,11 +10,17 @@ class Turno(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["activo"],
+                fields=["usuario"],
                 condition=models.Q(activo=True),
-                name="unique_turno_activo"
+                name="unique_turno_activo_por_usuario"
             )
         ]
+        permissions = [
+            ("abrir_turno", "Puede abrir turno"),
+            ("cerrar_turno", "Puede cerrar turno"),
+            ("ver_turnos", "Puede ver turnos"),
+        ]
+
     class TipoTurno(models.TextChoices):
         DIA = "DIA", "Día"
         NOCHE = "NOCHE", "Noche"
@@ -44,7 +50,7 @@ class Turno(models.Model):
     # ==========================
     # Datos económicos
     # ==========================
-    sueldo = models.DecimalField(
+    sueldo_reportado = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         default=0,
@@ -71,7 +77,7 @@ class Turno(models.Model):
         decimal_places=2,
         null=True,
         blank=True,
-        help_text="Efectivo que el empleado dice haber contado",
+        help_text="Efectivo contado al cierre",
     )
 
     diferencia = models.DecimalField(
@@ -79,7 +85,7 @@ class Turno(models.Model):
         decimal_places=2,
         null=True,
         blank=True,
-        help_text="Diferencia entre efectivo esperado y reportado",
+        help_text="Diferencia entre esperado y reportado",
     )
 
     caja_final = models.DecimalField(
@@ -87,7 +93,7 @@ class Turno(models.Model):
         decimal_places=2,
         null=True,
         blank=True,
-        help_text="Efectivo final reportado en caja",
+        help_text="Efectivo final en caja",
     )
 
     # ==========================
@@ -98,14 +104,11 @@ class Turno(models.Model):
         *,
         efectivo_esperado,
         efectivo_reportado,
-        sueldo
+        sueldo_reportado
     ):
-        """
-        Cierra el turno y deja registro contable completo.
-        """
         self.efectivo_esperado = efectivo_esperado
         self.efectivo_reportado = efectivo_reportado
-        self.sueldo = sueldo
+        self.sueldo_reportado = sueldo_reportado
 
         self.diferencia = efectivo_reportado - efectivo_esperado
         self.caja_final = efectivo_reportado
@@ -117,4 +120,4 @@ class Turno(models.Model):
 
     def __str__(self):
         estado = "Activo" if self.activo else "Cerrado"
-        return f"Turno {self.id} - {self.usuario} ({estado})"
+        return f"Turno #{self.id} - {self.usuario} ({self.tipo_turno}) [{estado}]"

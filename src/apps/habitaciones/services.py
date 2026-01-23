@@ -1,5 +1,5 @@
 from django.core.exceptions import ValidationError
-from .models import TipoHabitacion
+from .models import Habitacion, TipoHabitacion
 
 
 def crear_tipo_habitacion(*, nombre, descripcion=""):
@@ -28,3 +28,36 @@ def actualizar_tipo_habitacion(*, tipo_habitacion, nombre=None, descripcion=None
     tipo_habitacion.save()
 
     return tipo_habitacion
+
+
+def crear_habitacion(*, numero, tipo_habitacion):
+    if Habitacion.objects.filter(numero=numero).exists():
+        raise ValidationError("Ya existe una habitación con ese número")
+
+    if not tipo_habitacion.activo:
+        raise ValidationError("El tipo de habitación está inactivo")
+
+    return Habitacion.objects.create(
+        numero=numero,
+        tipo=tipo_habitacion
+    )
+
+
+def actualizar_habitacion(*, habitacion, numero=None, tipo_habitacion=None, activa=None):
+    if numero and numero != habitacion.numero:
+        if Habitacion.objects.filter(numero=numero).exists():
+            raise ValidationError("Ya existe una habitación con ese número")
+        habitacion.numero = numero
+
+    if tipo_habitacion:
+        if not tipo_habitacion.activo:
+            raise ValidationError("El tipo de habitación está inactivo")
+        habitacion.tipo_habitacion = tipo_habitacion
+
+    if activa is not None:
+        habitacion.activa = activa
+
+    habitacion.full_clean()
+    habitacion.save()
+
+    return habitacion

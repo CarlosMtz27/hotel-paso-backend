@@ -9,7 +9,7 @@ from rest_framework import status
 from .serializers import InicioTurnoSerializer, CerrarTurnoSerializer
 from .services import iniciar_turno, cerrar_turno_service, obtener_resumen_turno
 from .models import Turno
-
+from django.core.exceptions import ValidationError
 
 @method_decorator(csrf_exempt, name="dispatch")
 class IniciarTurnoView(APIView):
@@ -42,22 +42,25 @@ class CerrarTurnoAPIView(APIView):
         serializer.is_valid(raise_exception=True)
 
         try:
-            turno = Turno.objects.get(
-                usuario=request.user,
-                activo=True
-            )
+            turno = Turno.objects.get(activo=True)
         except Turno.DoesNotExist:
             return Response(
-                {"error": "No tienes un turno activo"},
+                {"error": "No hay un turno activo"},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        turno, sin_ingresos = cerrar_turno_service(
-            turno=turno,
-            usuario=request.user,
-            efectivo_reportado=serializer.validated_data["efectivo_reportado"],
-            sueldo=serializer.validated_data["sueldo"],
-        )
+        try:
+            turno, sin_ingresos = cerrar_turno_service(
+                turno=turno,
+                usuario=request.user,
+                efectivo_reportado=serializer.validated_data["efectivo_reportado"],
+                sueldo=serializer.validated_data["sueldo"],
+            )
+        except ValidationError as e:
+            return Response(
+                {"error": e.message},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         resumen = obtener_resumen_turno(turno=turno)
 

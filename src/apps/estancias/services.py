@@ -75,9 +75,6 @@ def cerrar_estancia(
     if not turno.activo:
         raise ValidationError("No hay un turno activo")
 
-    if estancia.turno_inicio != turno:
-        raise ValidationError("La estancia pertenece a otro turno")
-
     estancia.cerrar(
         turno_cierre=turno,
         hora_salida_real=hora_salida_real or timezone.now()
@@ -120,3 +117,5 @@ def agregar_horas_extra(
         metodo_pago=metodo_pago,
         estancia_id=estancia.id
     )
+
+    return precio_total

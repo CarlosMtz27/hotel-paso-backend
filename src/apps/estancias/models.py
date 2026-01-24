@@ -54,50 +54,34 @@ class Estancia(models.Model):
     )
 
     # ==========================
-    # Estado de la estancia
+    # Horarios
     # ==========================
-    hora_entrada = models.DateTimeField(
-        default=timezone.now
+    hora_entrada = models.DateTimeField(default=timezone.now)
+
+    hora_salida_programada = models.DateTimeField(
+        help_text="Hora calculada según tarifa y horas extra"
     )
 
-    hora_salida = models.DateTimeField(
+    hora_salida_real = models.DateTimeField(
         null=True,
-        blank=True
-    )
-
-    activa = models.BooleanField(
-        default=True
+        blank=True,
+        help_text="Hora real en que el cliente salió"
     )
 
     # ==========================
-    # Validaciones de dominio
+    # Estado
     # ==========================
-    def clean(self):
-        if not self.habitacion.activa:
-            raise ValidationError("La habitación no está activa")
-
-        if not self.turno_inicio.activo:
-            raise ValidationError("El turno de inicio no está activo")
-
-        if not self.tarifa.activa:
-            raise ValidationError("La tarifa está inactiva")
-
-    def save(self, *args, **kwargs):
-        self.full_clean()
-        super().save(*args, **kwargs)
+    activa = models.BooleanField(default=True)
 
     # ==========================
-    # Métodos de dominio
+    # Dominio
     # ==========================
-    def cerrar(self, *, turno_cierre):
+    def cerrar(self, *, turno_cierre, hora_salida_real):
         if not self.activa:
             raise ValidationError("La estancia ya está cerrada")
 
-        if not turno_cierre.activo:
-            raise ValidationError("El turno de cierre no está activo")
-
-        self.hora_salida = timezone.now()
         self.turno_cierre = turno_cierre
+        self.hora_salida_real = hora_salida_real
         self.activa = False
         self.save()
 

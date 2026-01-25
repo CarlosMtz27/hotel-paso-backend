@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 from .models import Producto
 
 
@@ -13,3 +14,19 @@ class ProductoSerializer(serializers.ModelSerializer):
             'fecha_creacion'
         ]
         read_only_fields = ['id', 'fecha_creacion']
+        extra_kwargs = {
+            'nombre': {
+                'validators': [
+                    UniqueValidator(
+                        queryset=Producto.objects.all(),
+                        message="Ya existe un producto con ese nombre."
+                    )
+                ]
+            }
+        }
+
+    def validate_precio(self, value):
+        """Valida que el precio sea mayor a cero."""
+        if value <= 0:
+            raise serializers.ValidationError("El precio debe ser mayor a cero.")
+        return value

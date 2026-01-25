@@ -10,12 +10,11 @@ class TipoHabitacionSerializer(serializers.ModelSerializer):
             "nombre",
             "descripcion",
             "activo",
-            "fecha_creacion",
         ]
 
 class HabitacionSerializer(serializers.ModelSerializer):
-    tipo_habitacion_nombre = serializers.CharField(
-        source="tipo_habitacion.nombre",
+    tipo_nombre = serializers.CharField(
+        source="tipo.nombre",
         read_only=True
     )
 
@@ -24,8 +23,8 @@ class HabitacionSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "numero",
-            "tipo_habitacion",
-            "tipo_habitacion_nombre",
+            "tipo",
+            "tipo_nombre",
             "activa",
             "fecha_creacion",
         ]

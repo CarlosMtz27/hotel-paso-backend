@@ -30,29 +30,29 @@ def actualizar_tipo_habitacion(*, tipo_habitacion, nombre=None, descripcion=None
     return tipo_habitacion
 
 
-def crear_habitacion(*, numero, tipo_habitacion):
+def crear_habitacion(*, numero, tipo):
     if Habitacion.objects.filter(numero=numero).exists():
         raise ValidationError("Ya existe una habitación con ese número")
 
-    if not tipo_habitacion.activo:
+    if not tipo.activo:
         raise ValidationError("El tipo de habitación está inactivo")
 
     return Habitacion.objects.create(
         numero=numero,
-        tipo=tipo_habitacion
+        tipo=tipo
     )
 
 
-def actualizar_habitacion(*, habitacion, numero=None, tipo_habitacion=None, activa=None):
+def actualizar_habitacion(*, habitacion, numero=None, tipo=None, activa=None):
     if numero and numero != habitacion.numero:
         if Habitacion.objects.filter(numero=numero).exists():
             raise ValidationError("Ya existe una habitación con ese número")
         habitacion.numero = numero
 
-    if tipo_habitacion:
-        if not tipo_habitacion.activo:
+    if tipo:
+        if not tipo.activo:
             raise ValidationError("El tipo de habitación está inactivo")
-        habitacion.tipo_habitacion = tipo_habitacion
+        habitacion.tipo = tipo
 
     if activa is not None:
         habitacion.activa = activa

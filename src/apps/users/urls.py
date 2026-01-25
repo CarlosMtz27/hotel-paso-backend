@@ -1,8 +1,9 @@
 from django.urls import path
-from .views import VistaLogin,VistaLoginInvitado
+from .views import UserRegistrationAPIView, VistaLoginInvitado, LogoutAPIView
 
 urlpatterns = [
-    path("login/", VistaLogin.as_view()),
-    path("login-invitado/", VistaLoginInvitado.as_view()),
-
+    # El login de admin/empleado se maneja con JWT en /api/auth/login/
+    path("register/", UserRegistrationAPIView.as_view(), name="register"),
+    path("login-invitado/", VistaLoginInvitado.as_view(), name="login_invitado"),
+    path("logout/", LogoutAPIView.as_view(), name="logout"),
 ]

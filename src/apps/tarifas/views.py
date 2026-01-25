@@ -1,50 +1,41 @@
-from rest_framework.views import APIView
+from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework import status
 
 from .models import Tarifa
 from .serializers import TarifaSerializer
-from .services import crear_tarifa, actualizar_tarifa
+from apps.core.permissions import IsAdminUser
 
 
-class TarifaAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+class TarifaListCreateAPIView(generics.ListCreateAPIView):
+    """
+    Maneja GET para listar todas las tarifas y POST para crear una nueva.
+    - `GET`: Cualquier usuario autenticado puede listar las tarifas.
+    - `POST`: Solo los administradores pueden crear tarifas.
+    """
+    queryset = Tarifa.objects.select_related('tipo_habitacion').order_by('tipo_habitacion', 'precio')
+    serializer_class = TarifaSerializer
+    filterset_fields = [
+        'activa',
+        'es_nocturna',
+        'tipo_habitacion'
+    ]
 
-    def get(self, request):
-        tarifas = Tarifa.objects.all()
-        serializer = TarifaSerializer(tarifas, many=True)
-        return Response(serializer.data)
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [IsAuthenticated(), IsAdminUser()]
+        return [IsAuthenticated()]
 
-    def post(self, request):
-        if request.user.rol != "ADMIN":
-            return Response(
-                {"error": "No tienes permisos"},
-                status=status.HTTP_403_FORBIDDEN
-            )
 
-        serializer = TarifaSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+class TarifaDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Maneja GET (detalle), PUT, PATCH (actualizar) y DELETE para una tarifa.
+    - `GET`: Cualquier usuario autenticado puede ver el detalle.
+    - `PUT`/`PATCH`/`DELETE`: Solo los administradores pueden modificar o eliminar.
+    """
+    queryset = Tarifa.objects.all()
+    serializer_class = TarifaSerializer
 
-        tarifa = crear_tarifa(**serializer.validated_data)
-
-        return Response(
-            TarifaSerializer(tarifa).data,
-            status=status.HTTP_201_CREATED
-        )
-
-    def put(self, request, pk):
-        if request.user.rol != "ADMIN":
-            return Response(
-                {"error": "No tienes permisos"},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        tarifa = Tarifa.objects.get(pk=pk)
-
-        tarifa = actualizar_tarifa(
-            tarifa=tarifa,
-            **request.data
-        )
-
-        return Response(TarifaSerializer(tarifa).data)
+    def get_permissions(self):
+        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
+            return [IsAuthenticated(), IsAdminUser()]
+        return [IsAuthenticated()]

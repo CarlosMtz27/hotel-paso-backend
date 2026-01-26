@@ -4,11 +4,9 @@ services:
       context: .
       dockerfile: docker/django/Dockerfile
     container_name: hotel_backend
-    
-    #command: tail -f /dev/null
-    command: python manage.py runserver 0.0.0.0:8000
+    command: python src/manage.py runserver 0.0.0.0:8000
     volumes:
-      - ./src:/app
+      - .:/hotel-paso-backend
     ports:
       - "8000:8000"
     env_file:

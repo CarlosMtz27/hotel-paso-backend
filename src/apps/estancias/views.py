@@ -46,8 +46,8 @@ class AbrirEstanciaAPIView(ActiveTurnoRequiredMixin, APIView):
         try:
             # Delega la creación y la lógica de negocio a la capa de servicios.
             estancia = abrir_estancia(
-                habitacion=serializer.validated_data["habitacion_id"],
-                tarifa=serializer.validated_data["tarifa_id"],
+                habitacion=serializer.validated_data["habitacion"],
+                tarifa=serializer.validated_data["tarifa"],
                 metodo_pago=serializer.validated_data["metodo_pago"],
                 # El mixin ya ha cargado el turno activo en self.turno_activo
                 turno=self.turno_activo,
@@ -75,7 +75,7 @@ class CerrarEstanciaAPIView(ActiveTurnoRequiredMixin, APIView):
 
         try:
             estancia = cerrar_estancia(
-                estancia=serializer.validated_data["estancia_id"],
+                estancia=serializer.validated_data["estancia"],
                 turno=self.turno_activo,
                 hora_salida_real=serializer.validated_data.get(
                     "hora_salida_real"
@@ -104,7 +104,7 @@ class AgregarHorasExtraAPIView(ActiveTurnoRequiredMixin, APIView):
         try:
             # El servicio ahora devuelve la estancia actualizada.
             estancia_actualizada = agregar_horas_extra(
-                estancia=serializer.validated_data["estancia_id"],
+                estancia=serializer.validated_data["estancia"],
                 turno=self.turno_activo,
                 cantidad_horas=serializer.validated_data["cantidad_horas"],
                 precio_hora=serializer.validated_data["precio_hora"],

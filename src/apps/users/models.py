@@ -8,6 +8,8 @@ class Usuario(AbstractUser):
     Añade un campo `rol` para manejar los permisos a nivel de aplicación y
     un campo `activo` para desactivar usuarios sin borrarlos.
     """
+    # La Meta se hereda de AbstractUser, no es necesario redefinirla a menos que se añadan más opciones.
+
     class Rol(models.TextChoices):
         """Define los roles disponibles en el sistema."""
         ADMINISTRADOR = "ADMIN", "Administrador"

@@ -1,7 +1,6 @@
-from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework import status
 from django.contrib.auth.hashers import make_password
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
@@ -9,6 +8,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from .models import Usuario
 from .serializers import LoginInvitadoSerializer, UserRegistrationSerializer, MyTokenObtainPairSerializer, UserSerializer
 from apps.core.permissions import IsAdminUser
+from .services import login_invitado_service
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 
@@ -16,55 +16,49 @@ from django.utils.decorators import method_decorator
 class MyTokenObtainPairView(TokenObtainPairView):
     """
     Vista de login personalizada para devolver datos del usuario junto con los tokens.
+    Hereda de la vista de JWT y especifica nuestro serializador personalizado.
     """
     serializer_class = MyTokenObtainPairSerializer
 
-@method_decorator(csrf_exempt, name="dispatch")
-class UserRegistrationAPIView(APIView):
+class UserRegistrationAPIView(generics.CreateAPIView):
     """
     Vista para que un administrador registre nuevos usuarios (empleados/admins).
+    Solo accesible por administradores autenticados.
+    Usa una vista genérica para simplificar el código de creación.
     """
     permission_classes = [IsAuthenticated, IsAdminUser]
     serializer_class = UserRegistrationSerializer
 
-    def post(self, request):
-        serializer = self.serializer_class(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        # serializer.save() devuelve la instancia del usuario creado
-        usuario = serializer.save()
-        # Devolvemos los datos del usuario recién creado
-        return Response(
-            UserSerializer(usuario).data,
-            status=status.HTTP_201_CREATED
-        )
+    def create(self, request, *args, **kwargs):
+        # Sobrescribimos `create` para usar nuestro UserSerializer en la respuesta.
+        response = super().create(request, *args, **kwargs)
+        user = Usuario.objects.get(pk=response.data['id'])
+        return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
-@method_decorator(csrf_exempt, name="dispatch")
-class VistaLoginInvitado(APIView):
+class VistaLoginInvitado(generics.GenericAPIView):
+    """
+    Vista para el login de invitados. No requiere autenticación previa.
+    Crea un usuario temporal de tipo 'INVITADO' y le genera tokens JWT.
+    """
     permission_classes = [AllowAny]
 
     def post(self, request):
+        """
+        Maneja la petición POST para el login de invitado.
+        1. Valida el nombre y el código de administrador.
+        2. Crea un usuario 'INVITADO' temporal.
+        3. Genera y devuelve tokens JWT para este usuario.
+        """
         serializer = LoginInvitadoSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        nombre = serializer.validated_data["nombre"]
-
-        # Creamos un nombre de usuario único para evitar colisiones
-        username = f"invitado_{nombre.lower().replace(' ', '_')}_{Usuario.objects.count()}"
-
-        usuario = Usuario.objects.create(
-            username=username,
-            first_name=nombre,
-            rol=Usuario.Rol.INVITADO,
-            password=make_password(None),  # Los invitados no tienen contraseña para iniciar sesión
-        )
-
-        # Generamos tokens JWT para el nuevo usuario invitado
-        refresh = RefreshToken.for_user(usuario)
+        # Delegamos la lógica de creación y generación de tokens a la capa de servicios.
+        usuario, tokens = login_invitado_service(nombre=serializer.validated_data["nombre"])
 
         return Response({
-            "refresh": str(refresh),
-            "access": str(refresh.access_token),
-            # Usamos el nuevo UserSerializer para asegurar consistencia
+            "refresh": tokens["refresh"],
+            "access": tokens["access"],
+            # Usamos el UserSerializer para asegurar consistencia y seguridad en la respuesta.
             "usuario": UserSerializer(usuario).data
         })
 
@@ -72,19 +66,23 @@ class VistaLoginInvitado(APIView):
 class LogoutAPIView(APIView):
     """
     Vista para invalidar el refresh token del usuario (logout).
+    Requiere que el usuario esté autenticado.
     """
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        """
+        Maneja la petición POST para el logout.
+        Añade el refresh token a la lista negra para que no pueda ser reutilizado.
+        """
         try:
             refresh_token = request.data["refresh"]
             token = RefreshToken(refresh_token)
             token.blacklist()
 
-            # HTTP 205 Reset Content: El servidor ha cumplido la solicitud 
-            # y no necesita devolver un contenido.
+            # HTTP 205 Reset Content: El servidor ha cumplido la solicitud
+            # y no necesita devolver un contenido. Es una respuesta adecuada para logout.
             return Response(status=status.HTTP_205_RESET_CONTENT)
-        except TokenError:
-            return Response({"error": "Token inválido o expirado"}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except (TokenError, KeyError):
+            # Capturamos TokenError si el token es inválido, y KeyError si "refresh" no está en el body.
+            return Response({"error": "Token de refresco inválido o no proporcionado."}, status=status.HTTP_400_BAD_REQUEST)

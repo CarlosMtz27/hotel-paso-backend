@@ -1,67 +1,98 @@
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 
+from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 
-from .serializers import InicioTurnoSerializer, CerrarTurnoSerializer
+from .serializers import InicioTurnoSerializer, CerrarTurnoSerializer, TurnoListSerializer
 from .services import iniciar_turno, cerrar_turno_service, obtener_resumen_turno
 from .models import Turno
 from django.core.exceptions import ValidationError
+from apps.core.permissions import IsAdminUser
+
+
+class TurnoListAPIView(generics.ListAPIView):
+    """
+    Endpoint de solo lectura para listar todos los turnos (históricos y activos).
+    - `GET`: Solo los administradores pueden ver la lista de turnos.
+    - Permite filtrar por: `usuario`, `activo`, `tipo_turno`.
+    """
+    # `select_related` optimiza la consulta para evitar N+1 queries al acceder a `usuario`.
+    queryset = Turno.objects.select_related('usuario').order_by('-fecha_inicio')
+    serializer_class = TurnoListSerializer
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    filterset_fields = {
+        'usuario': ['exact'],
+        'activo': ['exact'],
+        'tipo_turno': ['exact'],
+    }
+
 
 @method_decorator(csrf_exempt, name="dispatch")
 class IniciarTurnoView(APIView):
+    """Endpoint para iniciar un nuevo turno."""
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        """
+        Maneja la petición POST para crear un turno.
+        1. Valida los datos de entrada (tipo de turno, caja inicial).
+        2. Llama al servicio de negocio `iniciar_turno`.
+        3. Devuelve el objeto completo del turno recién creado.
+        """
         serializer = InicioTurnoSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        turno = iniciar_turno(
-            usuario=request.user,
-            **serializer.validated_data
-        )
-
-        return Response(
-            {
-                "id": turno.id,
-                "mensaje": "Turno iniciado correctamente",
-                "fecha_inicio": turno.fecha_inicio,
-            },
-            status=status.HTTP_201_CREATED
-        )
-
-
-class CerrarTurnoAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        serializer = CerrarTurnoSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
         try:
-            turno = Turno.objects.get(activo=True)
-        except Turno.DoesNotExist:
-            return Response(
-                {"error": "No hay un turno activo"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        try:
-            turno, sin_ingresos = cerrar_turno_service(
-                turno=turno,
+            # Delega la lógica de creación a la capa de servicios.
+            turno = iniciar_turno(
                 usuario=request.user,
-                efectivo_reportado=serializer.validated_data["efectivo_reportado"],
-                sueldo=serializer.validated_data["sueldo"],
+                **serializer.validated_data
             )
         except ValidationError as e:
+            # Captura errores de negocio (ej. ya hay un turno activo).
             return Response(
                 {"error": e.message},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Devuelve el estado completo del turno creado.
+        response_serializer = TurnoListSerializer(turno)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+
+class CerrarTurnoAPIView(APIView):
+    """Endpoint para cerrar el turno activo."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        """
+        Maneja la petición POST para cerrar un turno.
+        1. Valida los datos de entrada (efectivo reportado, sueldo).
+        2. Llama al servicio de negocio `cerrar_turno_service`.
+        3. Devuelve un resumen completo del turno cerrado.
+        """
+        serializer = CerrarTurnoSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            # Delega la lógica de cierre a la capa de servicios.
+            turno, sin_ingresos = cerrar_turno_service(
+                usuario=request.user,
+                efectivo_reportado=serializer.validated_data["efectivo_reportado"],
+                sueldo=serializer.validated_data["sueldo"],
+            )
+        except ValidationError as e:
+            # Captura errores de negocio (ej. no es el dueño del turno).
+            return Response(
+                {"error": e.message},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Obtiene un resumen detallado del turno recién cerrado.
         resumen = obtener_resumen_turno(turno=turno)
 
         return Response(

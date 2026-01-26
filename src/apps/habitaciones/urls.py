@@ -1,3 +1,5 @@
+# Define las rutas de la API para la aplicación 'habitaciones'.
+
 from django.urls import path
 from .views import (
     TipoHabitacionListAPIView,
@@ -8,17 +10,16 @@ from .views import (
 
 urlpatterns = [
     # --- TIPOS DE HABITACIÓN ---
-    # http://localhost:8000/api/habitaciones/tipos/
+    # Ejemplo: GET, POST /api/habitaciones/tipos/
     path('tipos/', TipoHabitacionListAPIView.as_view(), name='tipos_list'),
 
-    # http://localhost:8000/api/habitaciones/tipos/1/
+    # Ejemplo: GET, PUT /api/habitaciones/tipos/1/
     path('tipos/<int:pk>/', TipoHabitacionDetailAPIView.as_view(), name='tipos_detail'),
 
     # --- HABITACIONES ---
-    # http://localhost:8000/api/habitaciones/
+    # Ejemplo: GET, POST /api/habitaciones/
     path('', HabitacionListAPIView.as_view(), name='habitaciones_list'),
 
-    # http://localhost:8000/api/habitaciones/101/
-    # Si usaste 'numero' como Primary Key manual, está bien. Si es ID autoincremental, es el ID.
+    # Ejemplo: GET, PUT /api/habitaciones/1/
     path('<int:pk>/', HabitacionDetailAPIView.as_view(), name='habitaciones_detail'),
 ]

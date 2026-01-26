@@ -9,10 +9,16 @@ from apps.caja.models import MovimientoCaja
 
 @transaction.atomic
 def iniciar_turno(*, usuario, tipo_turno, caja_inicial=0):
+    """
+    Servicio de negocio para iniciar un nuevo turno.
+    Valida permisos y la unicidad del turno activo.
+    """
 
+    # Regla: El usuario debe tener el permiso específico para abrir turnos.
     if not usuario.has_perm("turnos.abrir_turno"):
         raise ValidationError("No tienes permiso para abrir turno")
 
+    # Regla: Solo puede existir un turno activo en todo el sistema a la vez.
     if Turno.objects.filter(activo=True).exists():
         raise ValidationError("Ya existe un turno activo")
 
@@ -27,17 +33,30 @@ def iniciar_turno(*, usuario, tipo_turno, caja_inicial=0):
 
 
 @transaction.atomic
-def cerrar_turno_service(*, turno, usuario, efectivo_reportado, sueldo):
+def cerrar_turno_service(*, usuario, efectivo_reportado, sueldo):
+    """
+    Servicio de negocio para cerrar un turno.
+    Orquesta las validaciones, el cálculo de totales y el cierre del turno.
+    """
+    try:
+        # La responsabilidad de encontrar el turno activo ahora reside en el servicio.
+        turno = Turno.objects.get(activo=True)
+    except Turno.DoesNotExist:
+        raise ValidationError("No hay un turno activo para cerrar.")
 
+    # Regla: El usuario debe tener el permiso específico para cerrar turnos.
     if not usuario.has_perm("turnos.cerrar_turno"):
         raise ValidationError("No tienes permiso para cerrar turno")
 
+    # Regla: Un empleado solo puede cerrar el turno que él mismo abrió.
+    if turno.usuario != usuario:
+        raise ValidationError("Solo puedes cerrar tu propio turno.")
+
+    # Regla: No se puede cerrar un turno que ya está cerrado.
     if not turno.activo:
         raise ValidationError("El turno ya está cerrado")
 
-    if efectivo_reportado is None or efectivo_reportado < 0:
-        raise ValidationError("Efectivo reportado inválido")
-
+    # Calcula los totales de ingresos del turno desde los movimientos de caja.
     movimientos = MovimientoCaja.objects.filter(turno=turno)
 
     total_efectivo = (
@@ -54,29 +73,28 @@ def cerrar_turno_service(*, turno, usuario, efectivo_reportado, sueldo):
 
     total_ingresos = total_efectivo + total_transferencia
 
-    # solo informativo
+    # Bandera informativa para saber si el turno tuvo actividad económica.
     sin_ingresos = total_ingresos == 0
 
-    turno.sueldo = sueldo
-    turno.efectivo_reportado = efectivo_reportado
-    turno.efectivo_esperado = (
+    # Fórmula contable para determinar el efectivo que debería haber en caja.
+    efectivo_esperado_calculado = (
         turno.caja_inicial + total_efectivo - sueldo
     )
-    turno.diferencia = (
-        efectivo_reportado - turno.efectivo_esperado
-    )
 
-    turno.activo = False
-    turno.fecha_fin = timezone.now()
-    turno.caja_final = efectivo_reportado
-    turno.save()
+    # Se llama al método de negocio del modelo, que es el responsable de cambiar su estado.
+    turno.cerrar_turno(
+        efectivo_esperado=efectivo_esperado_calculado,
+        efectivo_reportado=efectivo_reportado,
+        sueldo=sueldo
+    )
 
     return turno, sin_ingresos
 
 
 def obtener_resumen_turno(*, turno):
     """
-    Devuelve resumen contable y operativo del turno.
+    Devuelve un diccionario con el resumen contable y operativo del turno.
+    Esta función es de solo lectura y se usa para generar reportes.
     """
 
     # ==========================
@@ -102,14 +120,17 @@ def obtener_resumen_turno(*, turno):
     # ==========================
     # ESTANCIAS (informativo)
     # ==========================
+    # Cuenta cuántas estancias se abrieron durante este turno.
     estancias_iniciadas = Estancia.objects.filter(
         turno_inicio=turno
     ).count()
 
+    # Cuenta cuántas estancias se cerraron durante este turno.
     estancias_cerradas = Estancia.objects.filter(
         turno_cierre=turno
     ).count()
 
+    # Cuenta cuántas estancias quedaron activas en el sistema al momento del cierre.
     estancias_activas = Estancia.objects.filter(
         activa=True
     ).count()
@@ -129,7 +150,7 @@ def obtener_resumen_turno(*, turno):
         "total_efectivo": totales["EFECTIVO"],
         "total_transferencia": totales["TRANSFERENCIA"],
         "total_ingresos": total_ingresos,
-        "sueldo": turno.sueldo_reportado,
+        "sueldo": turno.sueldo,
         "efectivo_esperado": turno.efectivo_esperado,
         "efectivo_reportado": turno.efectivo_reportado,
         "diferencia": turno.diferencia,

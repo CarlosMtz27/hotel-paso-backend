@@ -19,7 +19,7 @@ class Migration(migrations.Migration):
                 ('fecha_inicio', models.DateTimeField(auto_now_add=True)),
                 ('fecha_fin', models.DateTimeField(blank=True, null=True)),
                 ('activo', models.BooleanField(default=True)),
-                ('sueldo_reportado', models.DecimalField(decimal_places=2, default=0, help_text='Sueldo que el empleado toma al cerrar el turno', max_digits=10)),
+                ('sueldo', models.DecimalField(decimal_places=2, default=0, help_text='Sueldo que el empleado toma al cerrar el turno', max_digits=10)),
                 ('caja_inicial', models.DecimalField(decimal_places=2, default=0, help_text='Dinero con el que inicia la caja', max_digits=10)),
                 ('efectivo_esperado', models.DecimalField(blank=True, decimal_places=2, help_text='Efectivo que debería haber en caja', max_digits=10, null=True)),
                 ('efectivo_reportado', models.DecimalField(blank=True, decimal_places=2, help_text='Efectivo contado al cierre', max_digits=10, null=True)),

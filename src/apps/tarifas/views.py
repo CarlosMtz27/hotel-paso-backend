@@ -12,8 +12,10 @@ class TarifaListCreateAPIView(generics.ListCreateAPIView):
     - `GET`: Cualquier usuario autenticado puede listar las tarifas.
     - `POST`: Solo los administradores pueden crear tarifas.
     """
+    # `select_related` optimiza la consulta para evitar N+1 queries al acceder a `tipo_habitacion`.
     queryset = Tarifa.objects.select_related('tipo_habitacion').order_by('tipo_habitacion', 'precio')
     serializer_class = TarifaSerializer
+    # Habilita el filtrado por estos campos a través de query params (ej. /api/tarifas/?activa=true).
     filterset_fields = [
         'activa',
         'es_nocturna',
@@ -21,6 +23,7 @@ class TarifaListCreateAPIView(generics.ListCreateAPIView):
     ]
 
     def get_permissions(self):
+        """Define permisos específicos por acción."""
         if self.request.method == 'POST':
             return [IsAuthenticated(), IsAdminUser()]
         return [IsAuthenticated()]
@@ -36,6 +39,7 @@ class TarifaDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = TarifaSerializer
 
     def get_permissions(self):
+        """Define permisos específicos por acción."""
         if self.request.method in ['PUT', 'PATCH', 'DELETE']:
             return [IsAuthenticated(), IsAdminUser()]
         return [IsAuthenticated()]

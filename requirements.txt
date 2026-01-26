@@ -6,3 +6,4 @@ djangorestframework-simplejwt
 openpyxl
 reportlab
 django-filter
+python-dateutil

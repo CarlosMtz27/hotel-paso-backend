@@ -66,3 +66,13 @@ class ProductoAPITests(APITestCase):
         response = self.client.post(self.list_create_url, data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['precio'][0], 'El precio debe ser mayor a cero.')
+
+    def test_filtrar_productos_activos(self):
+        """Prueba que se puede filtrar por productos activos."""
+        Producto.objects.create(nombre="Papas Fritas", precio=150, activo=False)
+        self.client.force_authenticate(user=self.employee_user)
+        response = self.client.get(self.list_create_url, {'activo': 'true'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data.get('results', response.data)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]['nombre'], 'Agua Mineral')

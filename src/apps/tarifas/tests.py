@@ -33,8 +33,10 @@ class TarifaAPITests(APITestCase):
         self.client.force_authenticate(user=self.employee_user)
         response = self.client.get(self.list_create_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]['nombre'], '3 Horas')
+        # Maneja respuestas paginadas y no paginadas para mayor robustez.
+        results = response.data.get('results', response.data)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]['nombre'], '3 Horas')
 
     def test_admin_puede_crear_tarifa(self):
         """Prueba que un administrador puede crear una tarifa."""

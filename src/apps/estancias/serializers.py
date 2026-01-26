@@ -7,6 +7,12 @@ from .models import Estancia
 
 
 class EstanciaSerializer(serializers.ModelSerializer):
+    """
+    Serializador de solo lectura para listar estancias.
+    Proporciona campos adicionales para una visualización más rica.
+    NOTA: Este serializador parece ser un remanente y no se usa en las vistas actuales.
+    `EstanciaDetalleSerializer` cumple una función similar y más completa.
+    """
     habitacion_numero = serializers.IntegerField(
         source="habitacion.numero",
         read_only=True
@@ -41,58 +47,41 @@ class EstanciaSerializer(serializers.ModelSerializer):
         ]
 
 class AbrirEstanciaSerializer(serializers.Serializer):
-
-    habitacion_id = serializers.IntegerField()
-    tarifa_id = serializers.IntegerField()
+    """
+    Serializador de escritura para validar los datos de entrada al abrir una estancia.
+    No está ligado a un modelo, solo define la estructura de la petición.
+    """
+    habitacion_id = serializers.PrimaryKeyRelatedField(
+        queryset=Habitacion.objects.all(), source='habitacion'
+    )
+    tarifa_id = serializers.PrimaryKeyRelatedField(
+        queryset=Tarifa.objects.all(), source='tarifa'
+    )
     metodo_pago = serializers.ChoiceField(
         choices=MovimientoCaja.MetodoPago.choices
     )
 
-    def validate(self, data):
-        try:
-            data["habitacion"] = Habitacion.objects.get(
-                id=data["habitacion_id"]
-            )
-        except Habitacion.DoesNotExist:
-            raise serializers.ValidationError(
-                {"habitacion_id": "Habitación no existe"}
-            )
-
-        try:
-            data["tarifa"] = Tarifa.objects.get(
-                id=data["tarifa_id"]
-            )
-        except Tarifa.DoesNotExist:
-            raise serializers.ValidationError(
-                {"tarifa_id": "Tarifa no existe"}
-            )
-
-        return data
-
 class CerrarEstanciaSerializer(serializers.Serializer):
-
-    estancia_id = serializers.IntegerField()
+    """
+    Serializador de escritura para validar los datos de entrada al cerrar una estancia.
+    """
+    estancia_id = serializers.PrimaryKeyRelatedField(
+        queryset=Estancia.objects.all(), source='estancia'
+    )
+    # La hora de salida es opcional; si no se provee, el servicio usará la hora actual.
     hora_salida_real = serializers.DateTimeField(
         required=False,
         allow_null=True
     )
 
-    def validate(self, data):
-        try:
-            data["estancia"] = Estancia.objects.get(
-                id=data["estancia_id"]
-            )
-        except Estancia.DoesNotExist:
-            raise serializers.ValidationError(
-                {"estancia_id": "La estancia no existe"}
-            )
-
-        return data
-
 
 class AgregarHorasExtraSerializer(serializers.Serializer):
-
-    estancia_id = serializers.IntegerField()
+    """
+    Serializador de escritura para validar los datos al agregar horas extra a una estancia.
+    """
+    estancia_id = serializers.PrimaryKeyRelatedField(
+        queryset=Estancia.objects.all(), source='estancia'
+    )
     cantidad_horas = serializers.IntegerField(min_value=1)
     precio_hora = serializers.DecimalField(
         max_digits=10,
@@ -103,24 +92,22 @@ class AgregarHorasExtraSerializer(serializers.Serializer):
     )
 
     def validate(self, data):
-        try:
-            data["estancia"] = Estancia.objects.get(
-                id=data["estancia_id"]
-            )
-        except Estancia.DoesNotExist:
+        """Valida que la estancia exista y esté activa."""
+        estancia = data['estancia']
+        # Regla de negocio: No se pueden agregar horas a una estancia ya cerrada.
+        if not estancia.activa:
             raise serializers.ValidationError(
-                {"estancia_id": "La estancia no existe"}
-            )
-
-        if not data["estancia"].activa:
-            raise serializers.ValidationError(
-                "La estancia ya está cerrada"
+                {"estancia_id": "La estancia ya está cerrada"}
             )
 
         return data
 
 class EstanciaDetalleSerializer(serializers.ModelSerializer):
-
+    """
+    Serializador de solo lectura para devolver el estado completo y actualizado
+    de una estancia después de una operación (abrir, cerrar, etc.).
+    """
+    # Usamos  `StringRelatedField` para una respuesta más legible y amigable para el frontend.
     habitacion = serializers.StringRelatedField()
     tarifa = serializers.StringRelatedField()
     turno_inicio = serializers.StringRelatedField()

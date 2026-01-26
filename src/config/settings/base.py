@@ -3,31 +3,31 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-SECRET_KEY = 'django-insecure-$%y7c#8%03djor-oy@l9fs%fnybgd^*fy37_0u40k1&^p^%de2'
+SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
     raise ValueError("SECRET_KEY no definido en variables de entorno")
 
 CODIGO_ADMIN_INVITADO = os.getenv("CODIGO_ADMIN_INVITADO")
 
-DEBUG = False
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
+    # Django Core Apps
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+
+    # Third Party Apps
+    "rest_framework",
     'rest_framework_simplejwt.token_blacklist',
     'django_filters',
 
-    # Third party
-    "rest_framework",
-
     # Local apps
-    "apps",
     "apps.core",
     "apps.users",
     "apps.turnos",
@@ -78,7 +78,9 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "mediafiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

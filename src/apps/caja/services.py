@@ -12,6 +12,12 @@ def crear_movimiento_caja(
     metodo_pago,
     descripcion=""
 ):
+    """
+    NOTA: Esta función parece ser un remanente de una versión anterior y no se
+    está utilizando actualmente en las vistas. La lógica de creación de movimientos
+    se maneja a través de servicios más específicos como `vender_producto`,
+    `abrir_estancia`, etc.
+    """
     # Buscar turno activo
     try:
         turno = Turno.objects.get(activo=True)
@@ -42,18 +48,14 @@ def vender_producto(
     Puede o no estar asociado a una estancia.
     """
 
-    if not turno.activo:
-        raise ValidationError("No hay un turno activo")
-
+    # Valida que el producto se pueda vender.
     if not producto.activo:
         raise ValidationError("El producto no está activo")
 
-    if cantidad <= 0:
-        raise ValidationError("Cantidad inválida")
-
     monto_total = producto.precio * cantidad
 
-    MovimientoCaja.objects.create(
+    # Crea el registro contable en la base de datos.
+    movimiento = MovimientoCaja.objects.create(
         turno=turno,
         tipo=MovimientoCaja.TipoMovimiento.PRODUCTO,
         monto=monto_total,
@@ -62,6 +64,8 @@ def vender_producto(
         estancia_id=estancia.id if estancia else None
     )
 
-    return monto_total
+    # El método .save() del modelo llama a full_clean(), que ya valida
+    # que el turno esté activo y que el monto sea positivo.
 
-
+    # Devuelve el objeto creado para que la vista pueda serializarlo.
+    return movimiento

@@ -17,22 +17,30 @@ def abrir_estancia(
     turno
 ):
     """
-    Abre una estancia y registra el cobro base en caja.
+    Servicio de negocio para abrir una nueva estancia.
+    Orquesta la creación de la Estancia y su correspondiente MovimientoCaja inicial.
+    Se ejecuta dentro de una transacción para garantizar la atomicidad.
     """
 
+    # Regla: No se puede operar sin un turno activo.
     if not turno.activo:
         raise ValidationError("No hay un turno activo")
 
+    # Regla: La habitación debe estar disponible para ser ocupada.
     if not habitacion.activa:
         raise ValidationError("La habitación no está activa")
 
+    # Regla: La habitación no debe tener otra estancia activa.
+    # Aunque hay una restricción en la BD, esta validación provee un mensaje de error más amigable.
     if Estancia.objects.filter(habitacion=habitacion, activa=True).exists():
         raise ValidationError("La habitación ya está ocupada")
 
+    # Regla: La tarifa seleccionada debe estar activa.
     if not tarifa.activa:
         raise ValidationError("La tarifa no está activa")
 
     hora_entrada = timezone.now()
+    # Regla: La hora de salida se calcula automáticamente y no es manipulable por el usuario.
     hora_salida_programada = hora_entrada + timezone.timedelta(
         hours=tarifa.horas
     )
@@ -46,7 +54,7 @@ def abrir_estancia(
         activa=True,
     )
 
-    # Movimiento de caja por la estancia base
+    # Regla: El cobro de la tarifa base se registra inmediatamente en la caja.
     MovimientoCaja.objects.create(
         turno=turno,
         tipo=MovimientoCaja.TipoMovimiento.ESTANCIA,
@@ -66,15 +74,18 @@ def cerrar_estancia(
     hora_salida_real=None
 ):
     """
-    Cierra una estancia sin recalcular montos.
+    Servicio de negocio para cerrar una estancia.
     """
 
+    # Regla: No se puede cerrar una estancia que ya está cerrada.
     if not estancia.activa:
         raise ValidationError("La estancia ya está cerrada")
 
+    # Regla: La operación debe realizarse dentro de un turno activo.
     if not turno.activo:
         raise ValidationError("No hay un turno activo")
 
+    # Delega la lógica de cambio de estado al método de dominio del modelo.
     estancia.cerrar(
         turno_cierre=turno,
         hora_salida_real=hora_salida_real or timezone.now()
@@ -92,24 +103,29 @@ def agregar_horas_extra(
     precio_hora,
     metodo_pago
 ):
-    
+    """
+    Servicio de negocio para agregar horas extra a una estancia activa.
+    """
 
+    # Regla: La operación debe realizarse dentro de un turno activo.
     if not turno.activo:
         raise ValidationError("No hay un turno activo")
 
+    # Regla: No se pueden agregar horas a una estancia ya cerrada.
     if not estancia.activa:
         raise ValidationError("La estancia ya está cerrada")
 
+    # Regla: La cantidad de horas debe ser un número positivo.
     if cantidad_horas <= 0:
         raise ValidationError("Horas extra inválidas")
 
     precio_total = cantidad_horas * precio_hora
 
-    # extender salida programada
-    estancia.hora_salida_programada += timedelta(hours=cantidad_horas)
-    estancia.save()
+    # Actualiza la hora de salida programada.
+    estancia.hora_salida_programada += timezone.timedelta(hours=cantidad_horas)
+    estancia.save(update_fields=['hora_salida_programada'])
 
-    # registrar ingreso en caja
+    # Registra el ingreso correspondiente en la caja.
     MovimientoCaja.objects.create(
         turno=turno,
         tipo="EXTRA",
@@ -118,4 +134,4 @@ def agregar_horas_extra(
         estancia_id=estancia.id
     )
 
-    return precio_total
+    return estancia

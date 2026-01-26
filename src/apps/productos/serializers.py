@@ -4,6 +4,11 @@ from .models import Producto
 
 
 class ProductoSerializer(serializers.ModelSerializer):
+    """
+    Serializador para el modelo Producto.
+    Maneja la validación (precio > 0, nombre único) y la conversión
+    de datos entre el formato de la API y los objetos de Django.
+    """
     class Meta:
         model = Producto
         fields = [

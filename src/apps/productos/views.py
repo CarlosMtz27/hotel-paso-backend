@@ -14,6 +14,7 @@ class ProductoListAPIView(generics.ListCreateAPIView):
     """
     queryset = Producto.objects.all().order_by('nombre')
     serializer_class = ProductoSerializer
+    filterset_fields = ['activo']
 
     def get_permissions(self):
         if self.request.method == 'POST':

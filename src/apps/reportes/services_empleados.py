@@ -1,74 +1,40 @@
-from django.db.models import Sum
+from django.db.models import Sum, Q, Count, Value, DecimalField
+from django.db.models.functions import Coalesce
 from apps.turnos.models import Turno
 from apps.caja.models import MovimientoCaja
 from django.contrib.auth import get_user_model
 
+User = get_user_model()
+
+
+def _get_empleado_report_queryset():
+    """
+    Queryset base y reutilizable para los reportes de empleados.
+    Calcula todos los totales por empleado usando la potencia de la base de datos.
+    """
+    return User.objects.filter(rol=User.Rol.EMPLEADO).annotate(
+        turnos_count=Count('turnos', distinct=True),
+        total_efectivo=Coalesce(Sum('turnos__movimientos__monto', filter=Q(turnos__movimientos__metodo_pago='EFECTIVO')), Value(0), output_field=DecimalField()),
+        total_transferencia=Coalesce(Sum('turnos__movimientos__monto', filter=Q(turnos__movimientos__metodo_pago='TRANSFERENCIA')), Value(0), output_field=DecimalField()),
+        total_tarjeta=Coalesce(Sum('turnos__movimientos__monto', filter=Q(turnos__movimientos__metodo_pago='TARJETA')), Value(0), output_field=DecimalField()),
+        total_ingresos=Coalesce(Sum('turnos__movimientos__monto'), Value(0), output_field=DecimalField()),
+        total_sueldos=Coalesce(Sum('turnos__sueldo'), Value(0), output_field=DecimalField()),
+        total_diferencias=Coalesce(Sum('turnos__diferencia'), Value(0), output_field=DecimalField()),
+        turnos_sin_ingresos=Count('turnos', filter=Q(turnos__movimientos__isnull=True))
+    )
 
 
 def reporte_por_empleado():
     """
-    Devuelve un resumen de ventas y caja por empleado
+    Devuelve un resumen de ventas y caja por empleado, ordenado por nombre.
     """
-
-    empleados = (
-        Turno.objects
-        .select_related("usuario")
-        .values("usuario_id", "usuario__username")
-        .distinct()
-    )
-
-    reporte = []
-
-    for emp in empleados:
-        turnos = Turno.objects.filter(usuario_id=emp["usuario_id"])
-
-        movimientos = MovimientoCaja.objects.filter(turno__in=turnos)
-
-        total_efectivo = movimientos.filter(
-            metodo_pago="EFECTIVO"
-        ).aggregate(total=Sum("monto"))["total"] or 0
-
-        total_transferencia = movimientos.filter(
-            metodo_pago="TRANSFERENCIA"
-        ).aggregate(total=Sum("monto"))["total"] or 0
-
-        total_tarjeta = movimientos.filter(
-            metodo_pago="TARJETA"
-        ).aggregate(total=Sum("monto"))["total"] or 0
-
-        total_sueldos = (
-            turnos.aggregate(total=Sum("sueldo"))["total"] or 0
-        )
-
-        total_diferencias = (
-            turnos.aggregate(total=Sum("diferencia"))["total"] or 0
-        )
-
-        turnos_sin_ingresos = turnos.filter(
-            movimientos__isnull=True
-        ).distinct().count()
-
-        reporte.append({
-            "empleado_id": emp["usuario_id"],
-            "empleado": emp["usuario__username"],
-            "turnos": turnos.count(),
-            "turnos_sin_ingresos": turnos_sin_ingresos,
-            "total_efectivo": total_efectivo,
-            "total_transferencia": total_transferencia,
-            "total_tarjeta": total_tarjeta,
-            "total_ingresos": (
-                total_efectivo + total_transferencia + total_tarjeta
-            ),
-            "total_sueldos": total_sueldos,
-            "total_diferencias": total_diferencias,
-        })
-
-    return reporte
+    return _get_empleado_report_queryset().order_by('username')
 
 
 def reporte_detalle_empleado(*, empleado_id):
     """
-    Devuelve el detalle de turnos de un empleado
+    Devuelve el detalle de turnos de un empleado.
+    Este servicio ya era eficiente, solo se añaden comentarios.
     """
 
     turnos = (
@@ -79,6 +45,7 @@ def reporte_detalle_empleado(*, empleado_id):
 
     detalle = []
 
+    # Aquí el bucle es aceptable porque el número de turnos por empleado es manejable.
     for turno in turnos:
         movimientos = MovimientoCaja.objects.filter(turno=turno)
 
@@ -120,57 +87,17 @@ def reporte_detalle_empleado(*, empleado_id):
 
 
 def ranking_empleados():
-    User = get_user_model()
-    empleados = User.objects.all()
-
-    ranking = []
-
-    for empleado in empleados:
-        turnos = Turno.objects.filter(usuario=empleado)
-
-        movimientos = MovimientoCaja.objects.filter(turno__in=turnos)
-
-        total_efectivo = movimientos.filter(
-            metodo_pago="EFECTIVO"
-        ).aggregate(total=Sum("monto"))["total"] or 0
-
-        total_transferencia = movimientos.filter(
-            metodo_pago="TRANSFERENCIA"
-        ).aggregate(total=Sum("monto"))["total"] or 0
-
-        total_tarjeta = movimientos.filter(
-            metodo_pago="TARJETA"
-        ).aggregate(total=Sum("monto"))["total"] or 0
-
-        total_ingresos = (
-            total_efectivo + total_transferencia + total_tarjeta
-        )
-
-        turnos_sin_ingresos = turnos.filter(
-            id__in=[
-                t.id for t in turnos
-                if not MovimientoCaja.objects.filter(turno=t).exists()
-            ]
-        ).count()
-
-        ranking.append({
-            "empleado_id": empleado.id,
-            "empleado": str(empleado),
-            "turnos": turnos.count(),
-            "total_ingresos": float(total_ingresos),
-            "total_efectivo": float(total_efectivo),
-            "total_transferencia": float(total_transferencia),
-            "total_tarjeta": float(total_tarjeta),
-            "turnos_sin_ingresos": turnos_sin_ingresos,
-        })
-
-    # ordenar por ingresos
-    ranking.sort(key=lambda x: x["total_ingresos"], reverse=True)
-
-    return ranking
+    """
+    Devuelve un ranking de empleados ordenado por ingresos totales de forma descendente.
+    Reutiliza el queryset base para máxima eficiencia.
+    """
+    return _get_empleado_report_queryset().order_by('-total_ingresos')
 
 
 def grafica_ingresos_por_empleado():
+    """
+    Prepara los datos para ser consumidos directamente por una librería de gráficas.
+    """
     ranking = ranking_empleados()
 
     return {

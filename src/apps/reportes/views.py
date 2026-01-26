@@ -1,22 +1,30 @@
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
-from .services import reporte_turnos
-from .serializers import ReporteTurnoSerializer
-from .services_excel import exportar_turnos_excel
 from django.http import FileResponse
-from .services_pdf import generar_pdf_turnos
-from .services_resumen import resumen_diario
-from .services_empleados import reporte_por_empleado
-from .services_empleados import reporte_detalle_empleado
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
-from .services_empleados import ranking_empleados, grafica_ingresos_por_empleado
+
+from .services import reporte_turnos
+from .serializers import ReporteTurnoSerializer, ReporteEmpleadoSerializer
+from .services_excel import exportar_turnos_excel
+from .services_pdf import generar_pdf_turnos
+from .services_resumen import resumen_diario
+from .services_empleados import (
+    reporte_por_empleado,
+    reporte_detalle_empleado,
+    ranking_empleados,
+    grafica_ingresos_por_empleado
+)
+from apps.core.permissions import IsAdminUser
 
 
 class ReporteTurnosAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    """
+    Vista para obtener un reporte detallado de los turnos.
+    Accesible solo por administradores.
+    """
+    permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request):
         fecha_desde = request.query_params.get("fecha_desde")
@@ -32,7 +40,11 @@ class ReporteTurnosAPIView(APIView):
         return Response(serializer.data)
 
 class ReporteTurnosExcelAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    """
+    Vista para exportar el reporte de turnos a un archivo Excel.
+    Accesible solo por administradores.
+    """
+    permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request):
         fecha_desde = request.query_params.get("fecha_desde")
@@ -46,7 +58,11 @@ class ReporteTurnosExcelAPIView(APIView):
     
 
 class ReporteTurnosPDFAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    """
+    Vista para exportar el reporte de turnos a un archivo PDF.
+    Accesible solo por administradores.
+    """
+    permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request):
         fecha_desde = request.query_params.get("fecha_desde")
@@ -65,7 +81,11 @@ class ReporteTurnosPDFAPIView(APIView):
         )
     
 class ResumenDiarioAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    """
+    Vista para obtener un resumen financiero de un día específico.
+    Accesible solo por administradores.
+    """
+    permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request):
         fecha = request.query_params.get("fecha")
@@ -74,16 +94,25 @@ class ResumenDiarioAPIView(APIView):
     
 
 class ReportePorEmpleadoAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    """
+    Vista para obtener un reporte agregado con los totales por empleado.
+    Accesible solo por administradores.
+    """
+    permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request):
         reporte = reporte_por_empleado()
-        return Response(reporte)
+        serializer = ReporteEmpleadoSerializer(reporte, many=True)
+        return Response(serializer.data)
     
 
 
 class ReporteDetalleEmpleadoAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    """
+    Vista para obtener el detalle de todos los turnos de un empleado específico.
+    Accesible solo por administradores.
+    """
+    permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request, empleado_id):
         User = get_user_model()
@@ -99,15 +128,24 @@ class ReporteDetalleEmpleadoAPIView(APIView):
     
 
 class RankingEmpleadosAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    """
+    Vista que devuelve un ranking de empleados ordenado por ingresos totales.
+    Accesible solo por administradores.
+    """
+    permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request):
         data = ranking_empleados()
-        return Response(data)
+        serializer = ReporteEmpleadoSerializer(data, many=True)
+        return Response(serializer.data)
 
 
 class GraficaIngresosEmpleadosAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    """
+    Vista que devuelve datos formateados para una gráfica de ingresos por empleado.
+    Accesible solo por administradores.
+    """
+    permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request):
         return Response(grafica_ingresos_por_empleado())

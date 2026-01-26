@@ -32,9 +32,10 @@ class UserRegistrationAPIView(generics.CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         # Sobrescribimos `create` para usar nuestro UserSerializer en la respuesta.
-        response = super().create(request, *args, **kwargs)
-        user = Usuario.objects.get(pk=response.data['id'])
-        return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response(UserSerializer(serializer.instance).data, status=status.HTTP_201_CREATED)
 
 class VistaLoginInvitado(generics.GenericAPIView):
     """

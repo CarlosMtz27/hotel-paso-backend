@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.exceptions import ValidationError as DRFValidationError # Renombrar para evitar conflicto
 from django.core.exceptions import ValidationError
 
 from apps.turnos.models import Turno
@@ -21,12 +22,14 @@ class ActiveTurnoRequiredMixin:
     Mixin que verifica la existencia de un turno activo antes de procesar la petición.
     Si no hay un turno activo, corta el flujo y devuelve un error 400.
     """
-    def dispatch(self, request, *args, **kwargs):
+    def initial(self, request, *args, **kwargs):
+        # Llama al método `initial` del padre para ejecutar sus validaciones (auth, perms, etc.)
+        super().initial(request, *args, **kwargs)
+        # Ahora, ejecuta nuestra validación personalizada.
         try:
             self.turno_activo = Turno.objects.get(activo=True)
         except Turno.DoesNotExist:
-            return Response({"error": "No hay un turno activo"}, status=status.HTTP_400_BAD_REQUEST)
-        return super().dispatch(request, *args, **kwargs)
+            raise DRFValidationError({"error": "No hay un turno activo"}) # Lanzar excepción de DRF
 
 class AbrirEstanciaAPIView(ActiveTurnoRequiredMixin, APIView):
     """Endpoint para abrir una nueva estancia."""

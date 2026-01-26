@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.conf import settings
 from django.contrib.auth.hashers import make_password
+from rest_framework.exceptions import AuthenticationFailed
 from .models import Usuario
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
@@ -23,7 +24,11 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
     def validate(self, attrs):
         # Llama al método padre para obtener los tokens.
+        # El método padre ya establece self.user si las credenciales son válidas.
         data = super().validate(attrs)
+        # Regla: Un usuario debe estar activo para poder iniciar sesión.
+        if not self.user.activo:
+            raise AuthenticationFailed("Usuario inactivo. Contacte al administrador.")
         # Usamos el UserSerializer para asegurar consistencia
         # y devolver todos los atributos del usuario de forma segura.
         data['usuario'] = UserSerializer(self.user).data
@@ -46,7 +51,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     def validate_username(self, value):
         """Valida que el nombre de usuario sea único (insensible a mayúsculas/minúsculas)."""
         if Usuario.objects.filter(username__iexact=value).exists():
-            raise serializers.ValidationError("Ya existe un usuario con este nombre.")
+            raise serializers.ValidationError("Ya existe un usuario con ese nombre.")
         return value
 
     def create(self, validated_data):

@@ -28,15 +28,15 @@ INSTALLED_APPS = [
     'django_filters',
 
     # Local apps
-    "app.apps.core.apps.CoreConfig",
-    "app.apps.users.apps.UsersConfig",
-    "app.apps.turnos.apps.TurnosConfig",
-    "app.apps.caja.apps.CajaConfig",
-    "app.apps.estancias.apps.EstanciasConfig",
-    "app.apps.reportes.apps.ReportesConfig",
-    "app.apps.habitaciones.apps.HabitacionesConfig",
-    "app.apps.productos.apps.ProductosConfig",
-    "app.apps.tarifas.apps.TarifasConfig",
+    "apps.core.apps.CoreConfig",
+    "apps.users.apps.UsersConfig",
+    "apps.turnos.apps.TurnosConfig",
+    "apps.caja.apps.CajaConfig",
+    "apps.estancias.apps.EstanciasConfig",
+    "apps.reportes.apps.ReportesConfig",
+    "apps.habitaciones.apps.HabitacionesConfig",
+    "apps.productos.apps.ProductosConfig",
+    "apps.tarifas.apps.TarifasConfig",
 ]
 
 AUTH_USER_MODEL = "users.Usuario"

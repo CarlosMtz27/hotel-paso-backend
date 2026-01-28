@@ -5,23 +5,34 @@ from .models import Estancia
 @admin.register(Estancia)
 class EstanciaAdmin(admin.ModelAdmin):
     """
-    Configuración personalizada para el modelo Estancia en el admin de Django.
-    Mejora la visualización y la capacidad de auditoría.
+    Configuración del admin para Estancia.
+    Configurado como vista de solo lectura para auditoría. Las estancias
+    se gestionan a través de la API para seguir la lógica de negocio.
     """
-    list_display = ('id', 'habitacion', 'tarifa', 'hora_entrada', 'hora_salida_programada', 'hora_salida_real', 'activa', 'turno_inicio', 'turno_cierre')
-    list_filter = ('activa', 'habitacion__tipo', 'turno_inicio__usuario')
-    search_fields = ('habitacion__numero',)
-    ordering = ('-hora_entrada',)
-    date_hierarchy = 'hora_entrada'
+    list_display = ('id', 'habitacion', 'tarifa', 'activa', 'turno_inicio', 'turno_cierre', 'hora_salida_programada')
+    list_filter = ('activa', 'habitacion__tipo', 'tarifa')
+    search_fields = ('id', 'habitacion__numero')
+    list_select_related = ('habitacion', 'tarifa', 'turno_inicio', 'turno_cierre', 'habitacion__tipo')
 
-    # Se recomienda hacer los campos de solo lectura para evitar modificaciones
-    # accidentales que no pasen por la lógica de negocio de los servicios.
-    readonly_fields = ('hora_entrada', 'hora_salida_programada', 'hora_salida_real', 'turno_inicio', 'turno_cierre')
+    fieldsets = (
+        ('Estado Actual', {
+            'fields': ('id', 'activa', 'habitacion', 'tarifa')
+        }),
+        ('Tiempos y Fechas', {
+            'fields': ('hora_salida_programada', 'hora_salida_real')
+        }),
+        ('Turnos Asociados', {
+            'fields': ('turno_inicio', 'turno_cierre')
+        }),
+    )
+
+    # Hacemos todos los campos de solo lectura para preservar la integridad de los datos.
+    readonly_fields = [f.name for f in Estancia._meta.get_fields()]
 
     def has_add_permission(self, request):
-        # Las estancias solo deben crearse a través de la API y los servicios.
+        # No permitir añadir desde el admin.
         return False
 
     def has_delete_permission(self, request, obj=None):
-        # Las estancias no se eliminan, solo se cierran.
+        # No permitir borrar para mantener el historial.
         return False

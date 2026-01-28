@@ -16,10 +16,30 @@ class TurnoAdmin(admin.ModelAdmin):
     search_fields = ('usuario__username', 'id')
     ordering = ('-fecha_inicio',)
     date_hierarchy = 'fecha_inicio'
+    list_select_related = ('usuario',)
 
-    # Hacer que los campos calculados sean de solo lectura para evitar inconsistencias.
+    # Se define una vista de solo lectura para los turnos desde el admin.
+    # Esto garantiza que los turnos solo se modifiquen a través de los
+    # servicios de negocio (iniciar/cerrar turno), manteniendo la integridad de los datos.
     readonly_fields = (
-        'fecha_inicio', 'fecha_fin', 'efectivo_esperado', 'diferencia', 'caja_final'
+        'id', 'usuario', 'tipo_turno', 'fecha_inicio', 'fecha_fin', 'activo',
+        'sueldo', 'caja_inicial', 'efectivo_esperado', 'efectivo_reportado',
+        'diferencia', 'caja_final'
+    )
+
+    fieldsets = (
+        ('Información General', {
+            'fields': ('id', 'usuario', 'tipo_turno', 'activo')
+        }),
+        ('Periodo', {
+            'fields': ('fecha_inicio', 'fecha_fin')
+        }),
+        ('Cierre de Caja (Contabilidad)', {
+            'fields': (
+                'caja_inicial', 'sueldo', 'efectivo_esperado',
+                'efectivo_reportado', 'diferencia', 'caja_final'
+            )
+        }),
     )
 
     def has_add_permission(self, request):

@@ -11,4 +11,6 @@ class ProductoAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'precio', 'activo', 'fecha_creacion')
     list_filter = ('activo',)
     search_fields = ('nombre',)
-    ordering = ('nombre',)
+    ordering = ('-fecha_creacion', 'nombre',)
+    date_hierarchy = 'fecha_creacion'
+    readonly_fields = ('fecha_creacion',)

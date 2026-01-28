@@ -11,7 +11,7 @@ from .serializers import InicioTurnoSerializer, CerrarTurnoSerializer, TurnoList
 from .services import iniciar_turno, cerrar_turno_service, obtener_resumen_turno
 from .models import Turno
 from django.core.exceptions import ValidationError
-from apps.core.permissions import IsAdminUser
+from apps.core.permissions import IsAdmin,IsEmpleado
 
 
 class TurnoListAPIView(generics.ListAPIView):
@@ -23,7 +23,7 @@ class TurnoListAPIView(generics.ListAPIView):
     # `select_related` optimiza la consulta para evitar N+1 queries al acceder a `usuario`.
     queryset = Turno.objects.select_related('usuario').order_by('-fecha_inicio')
     serializer_class = TurnoListSerializer
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated, IsAdmin]
     filterset_fields = {
         'usuario': ['exact'],
         'activo': ['exact'],
@@ -34,7 +34,7 @@ class TurnoListAPIView(generics.ListAPIView):
 @method_decorator(csrf_exempt, name="dispatch")
 class IniciarTurnoView(APIView):
     """Endpoint para iniciar un nuevo turno."""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsEmpleado]
 
     def post(self, request):
         """
@@ -66,7 +66,7 @@ class IniciarTurnoView(APIView):
 
 class CerrarTurnoAPIView(APIView):
     """Endpoint para cerrar el turno activo."""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsEmpleado]
 
     def post(self, request):
         """

@@ -9,7 +9,7 @@ class EstanciaAdmin(admin.ModelAdmin):
     Configurado como vista de solo lectura para auditoría. Las estancias
     se gestionan a través de la API para seguir la lógica de negocio.
     """
-    list_display = ('id', 'habitacion', 'tarifa', 'activa', 'turno_inicio', 'turno_cierre', 'hora_salida_programada')
+    list_display = ('id', 'habitacion', 'tarifa', 'activa', 'turno_inicio', 'turno_cierre', 'hora_salida_programada','hora_salida_real')
     list_filter = ('activa', 'habitacion__tipo', 'tarifa')
     search_fields = ('id', 'habitacion__numero')
     list_select_related = ('habitacion', 'tarifa', 'turno_inicio', 'turno_cierre', 'habitacion__tipo')

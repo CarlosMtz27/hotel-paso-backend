@@ -1,71 +1,59 @@
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from apps.productos.models import Producto
 from apps.turnos.models import Turno
 from .models import MovimientoCaja
-
-
-@transaction.atomic
-def crear_movimiento_caja(
-    *,
-    usuario,
-    monto,
-    metodo_pago,
-    descripcion=""
-):
-    """
-    NOTA: Esta función parece ser un remanente de una versión anterior y no se
-    está utilizando actualmente en las vistas. La lógica de creación de movimientos
-    se maneja a través de servicios más específicos como `vender_producto`,
-    `abrir_estancia`, etc.
-    """
-    # Buscar turno activo
-    try:
-        turno = Turno.objects.get(activo=True)
-    except Turno.DoesNotExist:
-        raise ValidationError("No hay un turno activo")
-
-    #Crear movimiento
-    movimiento = MovimientoCaja.objects.create(
-    turno=turno,
-    monto=monto,
-    metodo_pago=metodo_pago,
-)
-
-    return movimiento
-
 
 @transaction.atomic
 def vender_producto(
     *,
-    producto,
-    cantidad,
-    metodo_pago,
-    turno,
+    producto: Producto,
+    cantidad: int,
+    metodo_pago: str,
+    turno: Turno,
     estancia=None
-):
+) -> MovimientoCaja:
     """
-    Registra la venta de un producto.
-    Puede o no estar asociado a una estancia.
+    Servicio de negocio para registrar la venta de un producto.
+
+    Este servicio encapsula toda la lógica para una venta:
+    1. Valida que el producto esté disponible para la venta.
+    2. Calcula el monto total de la transacción.
+    3. Crea el registro contable (MovimientoCaja) correspondiente.
+    4. Se ejecuta dentro de una transacción para garantizar la atomicidad.
+
+    Args:
+        producto: La instancia del modelo `Producto` que se está vendiendo.
+        cantidad: El número de unidades del producto.
+        metodo_pago: El método de pago utilizado (ej. 'EFECTIVO').
+        turno: El turno activo en el que se realiza la venta.
+        estancia (opcional): La estancia a la que se puede asociar la venta.
+
+    Returns:
+        La instancia del `MovimientoCaja` recién creada.
+
+    Raises:
+        ValidationError: Si el producto no está activo.
     """
 
-    # Valida que el producto se pueda vender.
+    # Regla de negocio: Solo se pueden vender productos que están marcados como activos.
     if not producto.activo:
-        raise ValidationError("El producto no está activo")
+        raise ValidationError(f"El producto '{producto.nombre}' no está activo y no se puede vender.")
 
+    # Cálculo del monto total basado en el precio del producto y la cantidad.
     monto_total = producto.precio * cantidad
 
-    # Crea el registro contable en la base de datos.
+    # Creación del registro contable. Este es el único punto donde se crean
+    # movimientos de tipo 'PRODUCTO', centralizando la lógica.
     movimiento = MovimientoCaja.objects.create(
         turno=turno,
         tipo=MovimientoCaja.TipoMovimiento.PRODUCTO,
         monto=monto_total,
         metodo_pago=metodo_pago,
-        producto_id=producto.id,
-        estancia_id=estancia.id if estancia else None
+        producto=producto, # Es mejor pasar la instancia completa.
+        estancia=estancia # Pasa la instancia directamente.
     )
 
-    # El método .save() del modelo llama a full_clean(), que ya valida
-    # que el turno esté activo y que el monto sea positivo.
-
-    # Devuelve el objeto creado para que la vista pueda serializarlo.
+    # Se devuelve el objeto creado para que la vista pueda serializarlo y
+    # enviarlo como respuesta al cliente.
     return movimiento

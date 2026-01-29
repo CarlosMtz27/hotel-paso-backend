@@ -6,9 +6,7 @@ from .models import Habitacion, TipoHabitacion
 from .serializers import HabitacionSerializer, TipoHabitacionSerializer
 from apps.core.permissions import IsAdminUser
 
-# ==========================================
 #  VISTAS PARA TIPOS DE HABITACIÓN
-# ==========================================
 
 class TipoHabitacionListAPIView(generics.ListCreateAPIView):
     """
@@ -27,25 +25,24 @@ class TipoHabitacionListAPIView(generics.ListCreateAPIView):
         return [IsAuthenticated()]
 
 
-class TipoHabitacionDetailAPIView(generics.RetrieveUpdateAPIView):
+class TipoHabitacionDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     """
     Maneja peticiones para un Tipo de Habitación específico.
     - GET: Devuelve los detalles de un tipo de habitación.
     - PUT/PATCH: Permite a un administrador actualizar un tipo de habitación.
+    - DELETE: Permite a un administrador eliminar un tipo de habitación.
     """
     queryset = TipoHabitacion.objects.all()
     serializer_class = TipoHabitacionSerializer
 
     def get_permissions(self):
         """Define permisos específicos por acción."""
-        if self.request.method in ['PUT', 'PATCH']:
+        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
             return [IsAuthenticated(), IsAdminUser()]
         return [IsAuthenticated()]
 
 
-# ==========================================
 #  VISTAS PARA HABITACIONES
-# ==========================================
 
 class HabitacionListAPIView(generics.ListCreateAPIView):
     """
@@ -64,17 +61,18 @@ class HabitacionListAPIView(generics.ListCreateAPIView):
         return [IsAuthenticated()]
 
 
-class HabitacionDetailAPIView(generics.RetrieveUpdateAPIView):
+class HabitacionDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     """
     Maneja peticiones para una Habitación específica.
     - GET: Devuelve los detalles de una habitación.
     - PUT/PATCH: Permite a un administrador actualizar una habitación.
+    - DELETE: Permite a un administrador eliminar una habitación.
     """
     queryset = Habitacion.objects.all()
     serializer_class = HabitacionSerializer
 
     def get_permissions(self):
         """Define permisos específicos por acción."""
-        if self.request.method in ['PUT', 'PATCH']:
+        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
             return [IsAuthenticated(), IsAdminUser()]
         return [IsAuthenticated()]

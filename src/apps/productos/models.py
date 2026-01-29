@@ -29,9 +29,7 @@ class Producto(models.Model):
         auto_now_add=True
     )
 
-    # ==========================
     # Validaciones de dominio
-    # ==========================
     def clean(self):
         """
         Aplica reglas de negocio a nivel de modelo.

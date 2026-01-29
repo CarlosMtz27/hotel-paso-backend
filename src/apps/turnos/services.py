@@ -14,10 +14,6 @@ def iniciar_turno(*, usuario, tipo_turno, caja_inicial=0):
     Valida permisos y la unicidad del turno activo.
     """
 
-    # Regla: El usuario debe tener el permiso específico para abrir turnos.
-    if not usuario.has_perm("turnos.abrir_turno"):
-        raise ValidationError("No tienes permiso para abrir turno")
-
     # Regla: Solo puede existir un turno activo en todo el sistema a la vez.
     if Turno.objects.filter(activo=True).exists():
         raise ValidationError("Ya existe un turno activo")
@@ -43,10 +39,6 @@ def cerrar_turno_service(*, usuario, efectivo_reportado, sueldo):
         turno = Turno.objects.get(activo=True)
     except Turno.DoesNotExist:
         raise ValidationError("No hay un turno activo para cerrar.")
-
-    # Regla: El usuario debe tener el permiso específico para cerrar turnos.
-    if not usuario.has_perm("turnos.cerrar_turno"):
-        raise ValidationError("No tienes permiso para cerrar turno")
 
     # Regla: Un empleado solo puede cerrar el turno que él mismo abrió.
     if turno.usuario != usuario:
@@ -89,79 +81,3 @@ def cerrar_turno_service(*, usuario, efectivo_reportado, sueldo):
     )
 
     return turno, sin_ingresos
-
-
-def obtener_resumen_turno(*, turno):
-    """
-    Devuelve un diccionario con el resumen contable y operativo del turno.
-    Esta función es de solo lectura y se usa para generar reportes.
-    """
-
-    # ==========================
-    # INGRESOS (solo caja)
-    # ==========================
-    movimientos = (
-        MovimientoCaja.objects
-        .filter(turno=turno)
-        .values("metodo_pago")
-        .annotate(total=Sum("monto"))
-    )
-
-    totales = {
-        "EFECTIVO": 0,
-        "TRANSFERENCIA": 0,
-    }
-
-    for m in movimientos:
-        totales[m["metodo_pago"]] = m["total"]
-
-    total_ingresos = sum(totales.values())
-
-    # ==========================
-    # ESTANCIAS (informativo)
-    # ==========================
-    # Cuenta cuántas estancias se abrieron durante este turno.
-    estancias_iniciadas = Estancia.objects.filter(
-        turno_inicio=turno
-    ).count()
-
-    # Cuenta cuántas estancias se cerraron durante este turno.
-    estancias_cerradas = Estancia.objects.filter(
-        turno_cierre=turno
-    ).count()
-
-    # Cuenta cuántas estancias quedaron activas en el sistema al momento del cierre.
-    estancias_activas = Estancia.objects.filter(
-        activa=True
-    ).count()
-
-    # ==========================
-    # RESPUESTA
-    # ==========================
-    return {
-        "turno_id": turno.id,
-        "fecha_inicio": turno.fecha_inicio,
-        "fecha_fin": turno.fecha_fin,
-        "usuario": str(turno.usuario),
-        "tipo_turno": turno.tipo_turno,
-
-        # caja
-        "caja_inicial": turno.caja_inicial,
-        "total_efectivo": totales["EFECTIVO"],
-        "total_transferencia": totales["TRANSFERENCIA"],
-        "total_ingresos": total_ingresos,
-        "sueldo": turno.sueldo,
-        "efectivo_esperado": turno.efectivo_esperado,
-        "efectivo_reportado": turno.efectivo_reportado,
-        "diferencia": turno.diferencia,
-
-        # control
-        "sin_ingresos": total_ingresos == 0,
-
-        # estancias (operativo)
-        "estancias": {
-            "iniciadas": estancias_iniciadas,
-            "cerradas": estancias_cerradas,
-            "activas_al_cierre": estancias_activas,
-        },
-    }

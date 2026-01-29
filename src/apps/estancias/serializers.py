@@ -6,46 +6,6 @@ from apps.tarifas.models import Tarifa
 from .models import Estancia
 
 
-class EstanciaSerializer(serializers.ModelSerializer):
-    """
-    Serializador de solo lectura para listar estancias.
-    Proporciona campos adicionales para una visualización más rica.
-    NOTA: Este serializador parece ser un remanente y no se usa en las vistas actuales.
-    `EstanciaDetalleSerializer` cumple una función similar y más completa.
-    """
-    habitacion_numero = serializers.IntegerField(
-        source="habitacion.numero",
-        read_only=True
-    )
-    tarifa_nombre = serializers.CharField(
-        source="tarifa.nombre",
-        read_only=True
-    )
-    turno_inicio_id = serializers.IntegerField(
-        source="turno_inicio.id",
-        read_only=True
-    )
-    turno_cierre_id = serializers.IntegerField(
-        source="turno_cierre.id",
-        read_only=True
-    )
-
-    class Meta:
-        model = Estancia
-        fields = [
-            "id",
-            "habitacion",
-            "habitacion_numero",
-            "tarifa",
-            "tarifa_nombre",
-            "hora_entrada",
-            "hora_salida_programada",
-            "hora_salida_real",
-            "activa",
-            "turno_inicio_id",
-            "turno_cierre_id",
-        ]
-
 class AbrirEstanciaSerializer(serializers.Serializer):
     """
     Serializador de escritura para validar los datos de entrada al abrir una estancia.

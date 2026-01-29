@@ -7,11 +7,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 
-from .serializers import InicioTurnoSerializer, CerrarTurnoSerializer, TurnoListSerializer
-from .services import iniciar_turno, cerrar_turno_service, obtener_resumen_turno
+from .serializers import InicioTurnoSerializer, CerrarTurnoSerializer, TurnoListSerializer, TurnoResumenSerializer
+from .services import iniciar_turno, cerrar_turno_service
 from .models import Turno
-from django.core.exceptions import ValidationError
-from apps.core.permissions import IsAdmin,IsEmpleado
+from django.core.exceptions import ValidationError # Importar ValidationError de Django
+from apps.core.permissions import IsAdminUser, IsEmpleado, IsOnlyInvitado
 
 
 class TurnoListAPIView(generics.ListAPIView):
@@ -23,7 +23,7 @@ class TurnoListAPIView(generics.ListAPIView):
     # `select_related` optimiza la consulta para evitar N+1 queries al acceder a `usuario`.
     queryset = Turno.objects.select_related('usuario').order_by('-fecha_inicio')
     serializer_class = TurnoListSerializer
-    permission_classes = [IsAuthenticated, IsAdmin]
+    permission_classes = [IsAuthenticated, IsAdminUser]
     filterset_fields = {
         'usuario': ['exact'],
         'activo': ['exact'],
@@ -34,7 +34,8 @@ class TurnoListAPIView(generics.ListAPIView):
 @method_decorator(csrf_exempt, name="dispatch")
 class IniciarTurnoView(APIView):
     """Endpoint para iniciar un nuevo turno."""
-    permission_classes = [IsAuthenticated, IsEmpleado]
+    # Permite a Admins, Empleados e Invitados iniciar un turno.
+    permission_classes = [IsAuthenticated, (IsEmpleado | IsOnlyInvitado)]
 
     def post(self, request):
         """
@@ -66,7 +67,8 @@ class IniciarTurnoView(APIView):
 
 class CerrarTurnoAPIView(APIView):
     """Endpoint para cerrar el turno activo."""
-    permission_classes = [IsAuthenticated, IsEmpleado]
+    # Permite a Admins, Empleados e Invitados cerrar un turno.
+    permission_classes = [IsAuthenticated, (IsEmpleado | IsOnlyInvitado)]
 
     def post(self, request):
         """
@@ -92,14 +94,13 @@ class CerrarTurnoAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Obtiene un resumen detallado del turno recién cerrado.
-        resumen = obtener_resumen_turno(turno=turno)
+        # Serializa el turno cerrado usando el serializador de resumen para una respuesta estructurada.
+        resumen_serializer = TurnoResumenSerializer(turno)
 
         return Response(
             {
                 "mensaje": "Turno cerrado correctamente",
-                "resumen": resumen,
-                "sin_ingresos": sin_ingresos,
+                "resumen": resumen_serializer.data,
             },
             status=status.HTTP_200_OK
         )

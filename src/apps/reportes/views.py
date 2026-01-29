@@ -1,12 +1,13 @@
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework import status
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
 
 from .services import reporte_turnos
-from .serializers import ReporteTurnoSerializer, ReporteEmpleadoSerializer
+from .serializers import ReporteTurnoSerializer, ReporteEmpleadoSerializer, ReporteDetalleTurnoEmpleadoSerializer
 from .services_excel import exportar_turnos_excel
 from .services_pdf import generar_pdf_turnos
 from .services_resumen import resumen_diario
@@ -16,15 +17,17 @@ from .services_empleados import (
     ranking_empleados,
     grafica_ingresos_por_empleado
 )
-from apps.core.permissions import IsAdminUser
+from apps.core.permissions import IsAdminUser, IsEmpleado, IsOnlyInvitado
 
 
 class ReporteTurnosAPIView(APIView):
     """
     Vista para obtener un reporte detallado de los turnos.
-    Accesible solo por administradores.
+    - Admins: Ven todos los turnos.
+    - Empleados e Invitados: Ven solo sus propios turnos.
     """
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    # Permite a Admins, Empleados e Invitados ver sus propios reportes de turnos.
+    permission_classes = [IsAuthenticated, (IsEmpleado | IsOnlyInvitado)]
 
     def get(self, request):
         fecha_desde = request.query_params.get("fecha_desde")
@@ -42,9 +45,11 @@ class ReporteTurnosAPIView(APIView):
 class ReporteTurnosExcelAPIView(APIView):
     """
     Vista para exportar el reporte de turnos a un archivo Excel.
-    Accesible solo por administradores.
+    - Admins: Exportan todos los turnos.
+    - Empleados e Invitados: Exportan solo sus propios turnos.
     """
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    # Permite a Admins, Empleados e Invitados exportar sus propios reportes de turnos.
+    permission_classes = [IsAuthenticated, (IsEmpleado | IsOnlyInvitado)]
 
     def get(self, request):
         fecha_desde = request.query_params.get("fecha_desde")
@@ -60,15 +65,18 @@ class ReporteTurnosExcelAPIView(APIView):
 class ReporteTurnosPDFAPIView(APIView):
     """
     Vista para exportar el reporte de turnos a un archivo PDF.
-    Accesible solo por administradores.
+    - Admins: Exportan todos los turnos.
+    - Empleados e Invitados: Exportan solo sus propios turnos.
     """
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    # Permite a Admins, Empleados e Invitados exportar sus propios reportes de turnos.
+    permission_classes = [IsAuthenticated, (IsEmpleado | IsOnlyInvitado)]
 
     def get(self, request):
         fecha_desde = request.query_params.get("fecha_desde")
         fecha_hasta = request.query_params.get("fecha_hasta")
 
         buffer = generar_pdf_turnos(
+            usuario=request.user,
             fecha_desde=fecha_desde,
             fecha_hasta=fecha_hasta
         )
@@ -110,20 +118,33 @@ class ReportePorEmpleadoAPIView(APIView):
 class ReporteDetalleEmpleadoAPIView(APIView):
     """
     Vista para obtener el detalle de todos los turnos de un empleado específico.
-    Accesible solo por administradores.
+    - Admins: Ven el detalle de cualquier empleado.
+    - Empleados: Ven solo su propio detalle.
     """
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated, IsEmpleado]
 
     def get(self, request, empleado_id):
         User = get_user_model()
-        empleado = get_object_or_404(User, id=empleado_id)
 
-        detalle = reporte_detalle_empleado(empleado_id=empleado.id)
+        # Un empleado solo puede ver su propio reporte. Un admin puede ver cualquiera.
+        if request.user.rol == User.Rol.EMPLEADO and request.user.id != empleado_id:
+            return Response(
+                {"error": "No tienes permiso para ver el reporte de otro empleado."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Aseguramos que solo se pueda consultar por usuarios que son empleados o admins.
+        empleado = get_object_or_404(User, id=empleado_id, rol__in=[User.Rol.EMPLEADO, User.Rol.ADMINISTRADOR])
+
+        turnos_qs = reporte_detalle_empleado(empleado_id=empleado.id)
+
+        # Serializamos el queryset para asegurar una estructura de datos consistente y validada.
+        serializer = ReporteDetalleTurnoEmpleadoSerializer(turnos_qs, many=True)
 
         return Response({
             "empleado_id": empleado.id,
             "empleado": str(empleado),
-            "turnos": detalle,
+            "turnos": serializer.data,
         })
     
 

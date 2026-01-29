@@ -2,17 +2,16 @@ from openpyxl import Workbook
 from django.http import HttpResponse
 
 from .services import reporte_turnos
-
-
-def quitar_timezone(dt):
-    if dt is None:
-        return None
-    return dt.replace(tzinfo=None)
+from .serializers import ReporteTurnoSerializer
 
 
 def exportar_turnos_excel(*, usuario, fecha_desde=None, fecha_hasta=None):
-
-    data = reporte_turnos(
+    """
+    Genera un archivo Excel con el reporte de turnos.
+    Reutiliza el servicio y el serializador para mantener la consistencia de los datos.
+    """
+    # 1. Obtener el queryset del servicio.
+    turnos_qs = reporte_turnos(
         usuario=usuario,
         fecha_desde=fecha_desde,
         fecha_hasta=fecha_hasta,
@@ -21,6 +20,9 @@ def exportar_turnos_excel(*, usuario, fecha_desde=None, fecha_hasta=None):
     wb = Workbook()
     ws = wb.active
     ws.title = "Reporte de Turnos"
+
+    # 2. Serializar los datos para asegurar una estructura consistente.
+    data = ReporteTurnoSerializer(turnos_qs, many=True).data
 
     headers = [
         "ID Turno",
@@ -42,22 +44,23 @@ def exportar_turnos_excel(*, usuario, fecha_desde=None, fecha_hasta=None):
 
     ws.append(headers)
 
+    # 3. Escribir los datos serializados en el archivo Excel.
     for item in data:
         ws.append([
             item["turno_id"],
             item["empleado"],
             item["tipo_turno"],
-            quitar_timezone(item["fecha_inicio"]),
-            quitar_timezone(item["fecha_fin"]),
-            float(item["caja_inicial"]),
-            float(item["total_efectivo"]),
-            float(item["total_transferencia"]),
-            float(item["total_tarjeta"]),
-            float(item["total_ingresos"]),
-            float(item["sueldo"]),
-            float(item["efectivo_esperado"] or 0),
-            float(item["efectivo_reportado"] or 0),
-            float(item["diferencia"] or 0),
+            item["fecha_inicio"],  # El serializador ya formatea la fecha.
+            item["fecha_fin"],
+            item["caja_inicial"],
+            item["total_efectivo"],
+            item["total_transferencia"],
+            item["total_tarjeta"],
+            item["total_ingresos"],
+            item["sueldo"],
+            item["efectivo_esperado"],
+            item["efectivo_reportado"],
+            item["diferencia"],
             item["sin_ingresos"],
         ])
 

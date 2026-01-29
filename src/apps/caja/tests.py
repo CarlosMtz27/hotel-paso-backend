@@ -16,7 +16,7 @@ class CajaAPITests(APITestCase):
         self.admin_user = Usuario.objects.create_user(username='admin', password='password123', rol=Usuario.Rol.ADMINISTRADOR)
         self.employee_user = Usuario.objects.create_user(username='employee', password='password123', rol=Usuario.Rol.EMPLEADO)
 
-        # --- Data ---
+        # --- Datos ---
         self.turno_activo = Turno.objects.create(usuario=self.employee_user, tipo_turno="DIA", activo=True)
         self.producto_activo = Producto.objects.create(nombre="Refresco", precio="50.00", activo=True)
         self.producto_inactivo = Producto.objects.create(nombre="Snack", precio="30.00", activo=False)

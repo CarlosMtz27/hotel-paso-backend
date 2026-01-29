@@ -55,9 +55,7 @@ class Habitacion(models.Model):
         auto_now_add=True
     )
 
-    # ==========================
     # Métodos de Dominio y Validaciones
-    # ==========================
     def clean(self):
         """
         Aplica reglas de negocio a nivel de modelo antes de guardar.

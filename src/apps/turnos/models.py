@@ -24,9 +24,7 @@ class Turno(models.Model):
         DIA = "DIA", "Día"
         NOCHE = "NOCHE", "Noche"
 
-    # ==========================
     # Relaciones
-    # ==========================
     usuario = models.ForeignKey(
         Usuario,
         on_delete=models.PROTECT,  # Un turno siempre debe tener un usuario asociado.
@@ -34,9 +32,8 @@ class Turno(models.Model):
         help_text="Empleado responsable del turno."
     )
 
-    # ==========================
+    # 
     # Datos del turno
-    # ==========================
     tipo_turno = models.CharField(
         max_length=10,
         choices=TipoTurno.choices,
@@ -58,9 +55,7 @@ class Turno(models.Model):
         help_text="Indica si el turno está actualmente en curso."
     )
 
-    # ==========================
     # Datos económicos
-    # ==========================
     sueldo = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -107,9 +102,7 @@ class Turno(models.Model):
         help_text="Efectivo final en caja después de tomar el sueldo (es igual al efectivo reportado).",
     )
 
-    # ==========================
     # Métodos de dominio
-    # ==========================
     def clean(self):
         """Aplica validaciones de negocio a nivel de modelo."""
         if self.caja_inicial < 0:

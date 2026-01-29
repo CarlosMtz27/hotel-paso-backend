@@ -6,6 +6,7 @@ from rest_framework.exceptions import ValidationError as DRFValidationError # Re
 from django.core.exceptions import ValidationError
 
 from apps.turnos.models import Turno
+from apps.core.permissions import IsEmpleado, IsOnlyInvitado
 from apps.estancias.services import abrir_estancia
 from apps.estancias.services import cerrar_estancia
 from apps.estancias.services import agregar_horas_extra
@@ -33,7 +34,9 @@ class ActiveTurnoRequiredMixin:
 
 class AbrirEstanciaAPIView(ActiveTurnoRequiredMixin, APIView):
     """Endpoint para abrir una nueva estancia."""
-    permission_classes = [IsAuthenticated]
+    # Se permite abrir estancias a Admins, Empleados e Invitados.
+    # IsEmpleado cubre a Admins y Empleados. IsOnlyInvitado cubre a los invitados.
+    permission_classes = [IsAuthenticated, (IsEmpleado | IsOnlyInvitado)]
 
     def post(self, request):
         """
@@ -67,7 +70,8 @@ class AbrirEstanciaAPIView(ActiveTurnoRequiredMixin, APIView):
 
 class CerrarEstanciaAPIView(ActiveTurnoRequiredMixin, APIView):
     """Endpoint para cerrar una estancia activa."""
-    permission_classes = [IsAuthenticated]
+    # Se permite cerrar estancias a Admins, Empleados e Invitados.
+    permission_classes = [IsAuthenticated, (IsEmpleado | IsOnlyInvitado)]
 
     def post(self, request):
         """
@@ -95,7 +99,8 @@ class CerrarEstanciaAPIView(ActiveTurnoRequiredMixin, APIView):
 
 class AgregarHorasExtraAPIView(ActiveTurnoRequiredMixin, APIView):
     """Endpoint para agregar horas extra a una estancia."""
-    permission_classes = [IsAuthenticated]
+    # Se permite agregar horas a Admins, Empleados e Invitados.
+    permission_classes = [IsAuthenticated, (IsEmpleado | IsOnlyInvitado)]
 
     def post(self, request):
         """

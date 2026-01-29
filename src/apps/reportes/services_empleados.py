@@ -1,4 +1,4 @@
-from django.db.models import Sum, Q, Count, Value, DecimalField
+from django.db.models import Sum, Q, Count, Value, DecimalField, Case, When, BooleanField
 from django.db.models.functions import Coalesce
 from apps.turnos.models import Turno
 from apps.caja.models import MovimientoCaja
@@ -33,57 +33,26 @@ def reporte_por_empleado():
 
 def reporte_detalle_empleado(*, empleado_id):
     """
-    Devuelve el detalle de turnos de un empleado.
-    Este servicio ya era eficiente, solo se añaden comentarios.
+    Devuelve el detalle de turnos de un empleado, calculado eficientemente
+    con una única consulta a la base de datos.
     """
-
     turnos = (
         Turno.objects
         .filter(usuario_id=empleado_id)
+        .annotate(
+            total_efectivo=Coalesce(Sum('movimientos__monto', filter=Q(movimientos__metodo_pago='EFECTIVO')), Value(0), output_field=DecimalField()),
+            total_transferencia=Coalesce(Sum('movimientos__monto', filter=Q(movimientos__metodo_pago='TRANSFERENCIA')), Value(0), output_field=DecimalField()),
+            total_tarjeta=Coalesce(Sum('movimientos__monto', filter=Q(movimientos__metodo_pago='TARJETA')), Value(0), output_field=DecimalField()),
+            total_ingresos=Coalesce(Sum('movimientos__monto'), Value(0), output_field=DecimalField()),
+            sin_ingresos=Case(
+                When(movimientos__isnull=True, then=Value(True)),
+                default=Value(False),
+                output_field=BooleanField()
+            )
+        )
         .order_by("-fecha_inicio")
     )
-
-    detalle = []
-
-    # Aquí el bucle es aceptable porque el número de turnos por empleado es manejable.
-    for turno in turnos:
-        movimientos = MovimientoCaja.objects.filter(turno=turno)
-
-        total_efectivo = movimientos.filter(
-            metodo_pago="EFECTIVO"
-        ).aggregate(total=Sum("monto"))["total"] or 0
-
-        total_transferencia = movimientos.filter(
-            metodo_pago="TRANSFERENCIA"
-        ).aggregate(total=Sum("monto"))["total"] or 0
-
-        total_tarjeta = movimientos.filter(
-            metodo_pago="TARJETA"
-        ).aggregate(total=Sum("monto"))["total"] or 0
-
-        total_ingresos = (
-            total_efectivo + total_transferencia + total_tarjeta
-        )
-
-        detalle.append({
-            "turno_id": turno.id,
-            "tipo_turno": turno.tipo_turno,
-            "fecha_inicio": turno.fecha_inicio,
-            "fecha_fin": turno.fecha_fin,
-            "caja_inicial": float(turno.caja_inicial),
-            "total_efectivo": float(total_efectivo),
-            "total_transferencia": float(total_transferencia),
-            "total_tarjeta": float(total_tarjeta),
-            "total_ingresos": float(total_ingresos),
-            "sueldo": float(turno.sueldo),
-            "efectivo_esperado": float(turno.efectivo_esperado or 0),
-            "efectivo_reportado": float(turno.efectivo_reportado or 0),
-            "diferencia": float(turno.diferencia or 0),
-            "sin_ingresos": movimientos.count() == 0,
-            "activo": turno.activo,
-        })
-
-    return detalle
+    return turnos
 
 
 def ranking_empleados():
@@ -98,14 +67,15 @@ def grafica_ingresos_por_empleado():
     """
     Prepara los datos para ser consumidos directamente por una librería de gráficas.
     """
-    ranking = ranking_empleados()
+    # Se evalúa el queryset una sola vez para mejorar el rendimiento.
+    ranking_data = list(ranking_empleados().values('username', 'total_ingresos'))
 
     return {
-        "labels": [r["empleado"] for r in ranking],
+        "labels": [r["username"] for r in ranking_data],
         "datasets": [
             {
                 "label": "Ingresos Totales",
-                "data": [r["total_ingresos"] for r in ranking],
+                "data": [r["total_ingresos"] for r in ranking_data],
             }
         ]
     }

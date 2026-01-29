@@ -22,16 +22,16 @@ class ProductoListAPIView(generics.ListCreateAPIView):
         return [IsAuthenticated()]
 
 
-class ProductoDetailAPIView(generics.RetrieveUpdateAPIView):
+class ProductoDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     """
-    Maneja GET (detalle), PUT (actualizar) y PATCH (actualización parcial) para un producto.
+    Maneja GET (detalle), PUT/PATCH (actualizar) y DELETE para un producto.
     - `GET`: Cualquier usuario autenticado puede ver el detalle.
-    - `PUT`/`PATCH`: Solo los administradores pueden actualizar.
+    - `PUT`/`PATCH`/`DELETE`: Solo los administradores pueden actualizar o eliminar.
     """
     queryset = Producto.objects.all()
     serializer_class = ProductoSerializer
     
     def get_permissions(self):
-        if self.request.method in ['PUT', 'PATCH']:
+        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
             return [IsAuthenticated(), IsAdminUser()]
         return [IsAuthenticated()]

@@ -3,9 +3,10 @@ from reportlab.lib.pagesizes import letter, landscape
 from reportlab.lib import colors
 from io import BytesIO
 from .services import reporte_turnos
+from .serializers import ReporteTurnoSerializer
 
 
-def generar_pdf_turnos(fecha_desde=None, fecha_hasta=None):
+def generar_pdf_turnos(*, usuario, fecha_desde=None, fecha_hasta=None):
     buffer = BytesIO()
 
     doc = SimpleDocTemplate(
@@ -17,10 +18,15 @@ def generar_pdf_turnos(fecha_desde=None, fecha_hasta=None):
         bottomMargin=20,
     )
 
-    data = reporte_turnos(
+    # 1. Obtener el queryset del servicio.
+    turnos_qs = reporte_turnos(
+        usuario=usuario,
         fecha_desde=fecha_desde,
         fecha_hasta=fecha_hasta
     )
+
+    # 2. Serializar el queryset para convertirlo en una lista de diccionarios.
+    data = ReporteTurnoSerializer(turnos_qs, many=True).data
 
     tabla = [
         [
@@ -46,8 +52,8 @@ def generar_pdf_turnos(fecha_desde=None, fecha_hasta=None):
             item["turno_id"],
             item["empleado"],
             item["tipo_turno"],
-            item["fecha_inicio"].strftime("%Y-%m-%d %H:%M") if item["fecha_inicio"] else "",
-            item["fecha_fin"].strftime("%Y-%m-%d %H:%M") if item["fecha_fin"] else "",
+            item["fecha_inicio"], # El serializador ya debería formatear la fecha.
+            item["fecha_fin"],
             f"${item['caja_inicial']}",
             f"${item['total_efectivo']}",
             f"${item['total_transferencia']}",

@@ -6,17 +6,16 @@ from django.core.exceptions import ValidationError
 from .models import MovimientoCaja
 from .serializers import MovimientoCajaSerializer, CrearVentaProductoSerializer
 from .services import vender_producto
-from apps.core.permissions import IsAdminUser
+from apps.core.permissions import IsAdminUser, IsEmpleado, IsOnlyInvitado
 from apps.turnos.models import Turno
 
 
 class MovimientoCajaListCreateAPIView(generics.ListCreateAPIView):
     """
     - GET: Lista todos los movimientos de caja. (Solo Admins)
-    - POST: Registra la venta de un producto. (Cualquier empleado con turno activo)
+    - POST: Registra la venta de un producto. (Admins, Empleados e Invitados con turno activo)
     """
     queryset = MovimientoCaja.objects.select_related('turno', 'estancia', 'producto').order_by('-fecha')
-    permission_classes = [IsAuthenticated]
     filterset_fields = ['turno', 'tipo', 'metodo_pago', 'estancia']
 
     def get_serializer_class(self):
@@ -33,11 +32,14 @@ class MovimientoCajaListCreateAPIView(generics.ListCreateAPIView):
         """
         Define permisos específicos por acción.
         - GET (listar): Solo los administradores pueden ver el historial completo de caja.
-        - POST (crear): Cualquier empleado autenticado puede registrar una venta.
+        - POST (crear): Administradores, Empleados e Invitados pueden registrar una venta.
         """
         if self.request.method == 'GET':
             return [IsAuthenticated(), IsAdminUser()]
-        return [IsAuthenticated()]
+        
+        # Para POST, se permite a cualquier usuario con rol (Admin, Empleado, Invitado).
+        # IsEmpleado cubre a Admins y Empleados. IsOnlyInvitado cubre a los invitados.
+        return [IsAuthenticated(), (IsEmpleado | IsOnlyInvitado)()]
 
     def create(self, request, *args, **kwargs):
         """

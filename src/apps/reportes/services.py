@@ -15,7 +15,7 @@ def reporte_turnos(*, usuario, fecha_desde=None, fecha_hasta=None):
     if usuario.rol == Usuario.Rol.ADMINISTRADOR:
         turnos = Turno.objects.all()
     else:
-        turnos = Turno.objects.filter(usuario=usuario)
+        turnos = Turno.objects.filter(usuario=usuario, usuario__rol__in=[Usuario.Rol.EMPLEADO, Usuario.Rol.INVITADO])
 
     # Aplica filtros de fecha si se proporcionan.
     if fecha_desde:

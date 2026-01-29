@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -96,5 +97,39 @@ REST_FRAMEWORK = {
         'django_filters.rest_framework.DjangoFilterBackend'
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10
+    'PAGE_SIZE': 10,
+    'EXCEPTION_HANDLER': 'apps.core.exceptions.custom_exception_handler',
+
+}
+
+SIMPLE_JWT = {
+    # --- Duración de los Tokens ---
+    # El token que se usa para autenticar cada petición. Vida corta por seguridad.
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    # El token que permite obtener un nuevo access token. Vida larga para mantener la sesión.
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+
+    # --- Rotación de Tokens (Mayor Seguridad) ---
+    # Al refrescar, se invalida el refresh token usado y se emite uno nuevo.
+    "ROTATE_REFRESH_TOKENS": True,
+    # Añade a la lista negra el refresh token usado después de la rotación.
+    "BLACKLIST_AFTER_ROTATION": True,
+
+    # --- Configuración Estándar ---
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": SECRET_KEY,
+    "VERIFYING_KEY": None,
+    "AUDIENCE": None,
+    "ISSUER": None,
+    "JWK_URL": None,
+    "LEEWAY": 0,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
+    "USER_ID_FIELD": "id",
+    "USER_ID_CLAIM": "user_id",
+    "USER_AUTHENTICATION_RULE": "rest_framework_simplejwt.authentication.default_user_authentication_rule",
+    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
+    "TOKEN_TYPE_CLAIM": "token_type",
+    "JTI_CLAIM": "jti",
+    "UPDATE_LAST_LOGIN": True,
 }

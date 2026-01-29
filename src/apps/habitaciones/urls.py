@@ -9,14 +9,14 @@ from .views import (
 )
 
 urlpatterns = [
-    # --- TIPOS DE HABITACIÓN ---
+    # TIPOS DE HABITACIÓN 
     # Ejemplo: GET, POST /api/habitaciones/tipos/
     path('tipos/', TipoHabitacionListAPIView.as_view(), name='tipos_list'),
 
     # Ejemplo: GET, PUT /api/habitaciones/tipos/1/
     path('tipos/<int:pk>/', TipoHabitacionDetailAPIView.as_view(), name='tipos_detail'),
 
-    # --- HABITACIONES ---
+    # HABITACIONES
     # Ejemplo: GET, POST /api/habitaciones/
     path('', HabitacionListAPIView.as_view(), name='habitaciones_list'),
 

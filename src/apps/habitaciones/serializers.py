@@ -44,6 +44,7 @@ class HabitacionSerializer(serializers.ModelSerializer):
             "numero",
             "tipo",
             "tipo_nombre",
+            "estado",
             "activa",
             "fecha_creacion",
         ]

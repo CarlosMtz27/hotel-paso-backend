@@ -15,9 +15,9 @@ class TipoHabitacionAdmin(admin.ModelAdmin):
 class HabitacionAdmin(admin.ModelAdmin):
     """Configuración del admin para el modelo Habitacion."""
     # Muestra campos clave en la lista de habitaciones.
-    list_display = ('numero', 'tipo', 'activa', 'fecha_creacion')
+    list_display = ('numero', 'tipo', 'estado', 'activa', 'fecha_creacion')
     # Permite filtrar por estado y por tipo de habitación.
-    list_filter = ('activa', 'tipo')
+    list_filter = ('estado', 'activa', 'tipo')
     # Permite buscar habitaciones por su número.
     search_fields = ('numero', 'tipo__nombre')
     ordering = ('numero',)

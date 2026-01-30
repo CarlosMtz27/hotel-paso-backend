@@ -12,8 +12,6 @@ CODIGO_ADMIN_INVITADO = os.getenv("CODIGO_ADMIN_INVITADO")
 
 DEBUG = os.getenv("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = []
-
 INSTALLED_APPS = [
     # Django Core Apps
     "django.contrib.admin",
@@ -27,6 +25,10 @@ INSTALLED_APPS = [
     "rest_framework",
     'rest_framework_simplejwt.token_blacklist',
     'django_filters',
+    'corsheaders',
+    'drf_spectacular',
+
+    # Django Apps
 
     # Local apps
     "apps.core.apps.CoreConfig",
@@ -45,6 +47,7 @@ AUTH_USER_MODEL = "users.Usuario"
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -99,6 +102,8 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
     'EXCEPTION_HANDLER': 'apps.core.exceptions.custom_exception_handler',
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+
 
 }
 
@@ -133,3 +138,13 @@ SIMPLE_JWT = {
     "JTI_CLAIM": "jti",
     "UPDATE_LAST_LOGIN": True,
 }
+
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000", # React / Next.js
+    "http://localhost:5173", # Vite / Vue
+    "http://localhost:4200", # Angular
+    "http://127.0.0.1:3000",
+]
+
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "*"] # '*' permite cualquier IP (útil en dev)

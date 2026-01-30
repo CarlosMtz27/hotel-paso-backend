@@ -7,3 +7,5 @@ openpyxl
 reportlab
 django-filter
 python-dateutil
+django-cors-headers
+drf-spectacular

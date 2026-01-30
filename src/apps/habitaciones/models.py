@@ -35,6 +35,12 @@ class Habitacion(models.Model):
     Cada habitación tiene un número único y pertenece a un TipoHabitacion.
     """
 
+    class Estado(models.TextChoices):
+        DISPONIBLE = "DISPONIBLE", "Disponible"
+        OCUPADA = "OCUPADA", "Ocupada"
+        LIMPIEZA = "LIMPIEZA", "En Limpieza"
+        MANTENIMIENTO = "MANTENIMIENTO", "En Mantenimiento"
+
     numero = models.PositiveIntegerField(
         unique=True,
         help_text="Número único que identifica la habitación."
@@ -44,6 +50,13 @@ class Habitacion(models.Model):
         TipoHabitacion,
         on_delete=models.PROTECT,  # Evita borrar un tipo si tiene habitaciones asignadas.
         related_name="habitaciones"
+    )
+
+    estado = models.CharField(
+        max_length=20,
+        choices=Estado.choices,
+        default=Estado.DISPONIBLE,
+        help_text="Estado operativo actual de la habitación."
     )
 
     activa = models.BooleanField(
@@ -76,5 +89,5 @@ class Habitacion(models.Model):
 
     def __str__(self):
         """Representación en cadena para legibilidad."""
-        estado = "Activa" if self.activa else "Inactiva"
-        return f"Habitación {self.numero} ({estado})"
+        estado_str = "Inactiva" if not self.activa else self.get_estado_display()
+        return f"Habitación {self.numero} ({estado_str})"

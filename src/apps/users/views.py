@@ -2,16 +2,12 @@ from rest_framework.response import Response
 from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from django.contrib.auth.hashers import make_password
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .models import Usuario
 from .serializers import LoginInvitadoSerializer, UserRegistrationSerializer, MyTokenObtainPairSerializer, UserSerializer
 from apps.core.permissions import IsAdminUser
 from .services import login_invitado_service
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
 
 
 class MyTokenObtainPairView(TokenObtainPairView):
@@ -88,3 +84,17 @@ class LogoutAPIView(APIView):
         except (TokenError, KeyError):
             # Capturamos TokenError si el token es inválido, y KeyError si "refresh" no está en el body.
             return Response({"error": "Token de refresco inválido o no proporcionado."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CurrentUserAPIView(APIView):
+    """
+    Vista para obtener los datos del usuario actualmente autenticado.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """
+        Devuelve los datos del usuario que realiza la petición.
+        """
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)

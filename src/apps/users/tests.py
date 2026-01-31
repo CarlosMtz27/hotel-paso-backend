@@ -17,6 +17,7 @@ class UserAuthAPITests(APITestCase):
         self.login_invitado_url = reverse('login_invitado')
         self.login_url = reverse('token_obtain_pair') # Asumiendo que esta es la URL de login JWT
         self.logout_url = reverse('logout')
+        self.current_user_url = reverse('current_user')
 
     def test_admin_puede_registrar_usuario(self):
         """Verifica que un administrador puede registrar un nuevo empleado."""
@@ -101,4 +102,18 @@ class UserAuthAPITests(APITestCase):
         self.employee_user.save()
         login_data = {"username": "employee", "password": "password123"}
         response = self.client.post(self.login_url, login_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_obtener_usuario_actual(self):
+        """Verifica que un usuario autenticado puede obtener sus propios datos."""
+        self.client.force_authenticate(user=self.employee_user)
+        response = self.client.get(self.current_user_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['username'], self.employee_user.username)
+        self.assertEqual(response.data['rol'], Usuario.Rol.EMPLEADO)
+        self.assertNotIn('password', response.data)
+
+    def test_obtener_usuario_actual_no_autenticado_falla(self):
+        """Verifica que un usuario no autenticado no puede obtener datos."""
+        response = self.client.get(self.current_user_url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

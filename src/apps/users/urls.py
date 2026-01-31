@@ -1,12 +1,16 @@
 # Define las rutas de la API para la aplicación 'users'.
 
 from django.urls import path
-from .views import UserRegistrationAPIView, VistaLoginInvitado, LogoutAPIView, MyTokenObtainPairView
+from .views import (
+    CurrentUserAPIView, LogoutAPIView, MyTokenObtainPairView,
+    UserRegistrationAPIView, VistaLoginInvitado
+)
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
     # Rutas de autenticación JWT
     path("login/", MyTokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("user/", CurrentUserAPIView.as_view(), name="current_user"),
     path("refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("logout/", LogoutAPIView.as_view(), name="logout"),
     # Rutas de gestión de usuarios

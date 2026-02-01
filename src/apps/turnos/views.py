@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.exceptions import NotFound
 
 from .serializers import InicioTurnoSerializer, CerrarTurnoSerializer, TurnoListSerializer, TurnoResumenSerializer
 from .services import iniciar_turno, cerrar_turno_service
@@ -104,3 +105,47 @@ class CerrarTurnoAPIView(APIView):
             },
             status=status.HTTP_200_OK
         )
+
+
+class TurnoActivoAPIView(APIView):
+    """
+    Endpoint para obtener el turno activo.
+    - `GET`: Devuelve el turno activo si existe, de lo contrario 404.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        """
+        Busca y devuelve el turno activo.
+        """
+        try:
+            # Se usa select_related para optimizar la consulta del usuario.
+            turno_activo = Turno.objects.select_related('usuario').get(activo=True)
+            # Usamos TurnoListSerializer que es más ligero que el de resumen.
+            serializer = TurnoListSerializer(turno_activo)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Turno.DoesNotExist:
+            # Si no se encuentra, se lanza una excepción que DRF convierte en 404.
+            raise NotFound(detail="No hay un turno activo.")
+
+
+class TurnoActivoAPIView(APIView):
+    """
+    Endpoint para obtener el turno activo.
+    - `GET`: Devuelve el turno activo si existe, de lo contrario 404.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        """
+        Busca y devuelve el turno activo.
+        """
+        try:
+            # Se usa select_related para optimizar la consulta del usuario.
+            turno_activo = Turno.objects.select_related('usuario').get(activo=True)
+            # Usamos TurnoListSerializer que es más ligero que el de resumen.
+            serializer = TurnoListSerializer(turno_activo)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Turno.DoesNotExist:
+            # Si no se encuentra, se lanza una excepción que DRF convierte en 404.
+            raise NotFound(detail="No hay un turno activo.")

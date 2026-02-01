@@ -9,12 +9,14 @@ class ProductoSerializer(serializers.ModelSerializer):
     Maneja la validación (precio > 0, nombre único) y la conversión
     de datos entre el formato de la API y los objetos de Django.
     """
+
     class Meta:
         model = Producto
         fields = [
             'id',
             'nombre',
             'precio',
+            'stock',
             'activo',
             'fecha_creacion'
         ]
@@ -27,7 +29,8 @@ class ProductoSerializer(serializers.ModelSerializer):
                         message="Ya existe un producto con ese nombre."
                     )
                 ]
-            }
+            },
+            'stock': {'min_value': 0},
         }
 
     def validate_precio(self, value):

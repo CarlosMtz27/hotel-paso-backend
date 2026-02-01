@@ -20,6 +20,11 @@ class Producto(models.Model):
         help_text="Precio de venta del producto."
     )
 
+    stock = models.PositiveIntegerField(
+        default=0,
+        help_text="Cantidad de unidades disponibles en inventario."
+    )
+
     activo = models.BooleanField(
         default=True,
         help_text="Indica si el producto está disponible para la venta"
@@ -49,4 +54,4 @@ class Producto(models.Model):
     def __str__(self):
         """Representación en cadena para legibilidad."""
         estado = "Activo" if self.activo else "Inactivo"
-        return f"{self.nombre} - ${self.precio} ({estado})"
+        return f"{self.nombre} - ${self.precio} (Stock: {self.stock}) ({estado})"

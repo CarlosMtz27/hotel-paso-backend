@@ -10,6 +10,7 @@ class ProductoListAPIView(generics.ListCreateAPIView):
     """
     Maneja GET para listar todos los productos y POST para crear uno nuevo.
     - `GET`: Cualquier usuario autenticado puede listar los productos.
+      - Se puede filtrar por `activo=true/false`.
     - `POST`: Solo los administradores pueden crear productos.
     """
     queryset = Producto.objects.all().order_by('nombre')

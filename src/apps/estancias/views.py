@@ -1,12 +1,13 @@
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, generics
 from rest_framework.exceptions import ValidationError as DRFValidationError # Renombrar para evitar conflicto
 from django.core.exceptions import ValidationError
 
 from apps.turnos.models import Turno
 from apps.core.permissions import IsEmpleado, IsOnlyInvitado
+from .models import Estancia
 from apps.estancias.services import abrir_estancia
 from apps.estancias.services import cerrar_estancia
 from apps.estancias.services import agregar_horas_extra
@@ -16,6 +17,26 @@ from apps.estancias.serializers import (
     AgregarHorasExtraSerializer,
     EstanciaDetalleSerializer,
 )
+
+
+class EstanciaListAPIView(generics.ListAPIView):
+    """
+    Endpoint de solo lectura para listar todas las estancias (históricas y activas).
+    - `GET`: Solo los empleados y administradores pueden ver la lista de estancias.
+    - Permite filtrar por: `activa`, `habitacion`, `turno_inicio`, `turno_cierre`.
+    """
+    serializer_class = EstanciaDetalleSerializer
+    permission_classes = [IsAuthenticated, IsEmpleado]
+    # `select_related` optimiza la consulta para evitar N+1 queries.
+    queryset = Estancia.objects.select_related(
+        'habitacion', 'tarifa', 'turno_inicio', 'turno_cierre'
+    ).order_by('-hora_entrada')
+    filterset_fields = {
+        'activa': ['exact'],
+        'habitacion': ['exact'],
+        'turno_inicio': ['exact'],
+        'turno_cierre': ['exact'],
+    }
 
 
 class ActiveTurnoRequiredMixin:
@@ -52,10 +73,8 @@ class AbrirEstanciaAPIView(ActiveTurnoRequiredMixin, APIView):
         try:
             # Delega la creación y la lógica de negocio a la capa de servicios.
             estancia = abrir_estancia(
-                habitacion=serializer.validated_data["habitacion"],
-                tarifa=serializer.validated_data["tarifa"],
-                metodo_pago=serializer.validated_data["metodo_pago"],
-                # El mixin ya ha cargado el turno activo en self.turno_activo
+                **serializer.validated_data,
+                # El mixin ya ha cargado el turno activo en self.turno_activo.
                 turno=self.turno_activo,
             )
         except ValidationError as e:

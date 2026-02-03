@@ -69,6 +69,8 @@ class EstanciaDetalleSerializer(serializers.ModelSerializer):
     """
     # Usamos  `StringRelatedField` para una respuesta más legible y amigable para el frontend.
     habitacion = serializers.StringRelatedField()
+    # Campo adicional para devolver solo el número de la habitación, útil para el frontend.
+    habitacion_numero = serializers.IntegerField(source='habitacion.numero', read_only=True)
     tarifa = serializers.StringRelatedField()
     turno_inicio = serializers.StringRelatedField()
     turno_cierre = serializers.StringRelatedField()
@@ -78,6 +80,7 @@ class EstanciaDetalleSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "habitacion",
+            "habitacion_numero",
             "tarifa",
             "hora_entrada",
             "hora_salida_programada",

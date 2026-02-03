@@ -26,14 +26,14 @@ def abrir_estancia(
     if not turno.activo:
         raise ValidationError("No hay un turno activo")
 
-    # Regla: La habitación debe estar disponible para ser ocupada.
+    # Regla: La habitación debe estar activa y disponible para ser ocupada.
     if not habitacion.activa:
-        raise ValidationError("La habitación no está activa")
-
-    # Regla: La habitación no debe tener otra estancia activa.
-    # Aunque hay una restricción en la BD, esta validación provee un mensaje de error más amigable.
-    if Estancia.objects.filter(habitacion=habitacion, activa=True).exists():
-        raise ValidationError("La habitación ya está ocupada")
+        raise ValidationError("La habitación no está activa y no puede ser ocupada.")
+    # Esta validación es más explícita y depende del estado correcto de la habitación.
+    if habitacion.estado != habitacion.Estado.DISPONIBLE:
+        raise ValidationError(
+            f"La habitación no está disponible. Estado actual: {habitacion.get_estado_display()}"
+        )
 
     # Regla: La tarifa seleccionada debe estar activa.
     if not tarifa.activa:
@@ -63,6 +63,10 @@ def abrir_estancia(
         estancia_id=estancia.id,
     )
 
+    # Actualizar el estado de la habitación a 'Ocupada'
+    habitacion.estado = habitacion.Estado.OCUPADA
+    habitacion.save(update_fields=['estado'])
+
     return estancia
 
 
@@ -90,6 +94,11 @@ def cerrar_estancia(
         turno_cierre=turno,
         hora_salida_real=hora_salida_real or timezone.now()
     )
+
+    # Al cerrar, la habitación pasa a estado de 'Limpieza' para que sea revisada.
+    habitacion = estancia.habitacion
+    habitacion.estado = habitacion.Estado.LIMPIEZA
+    habitacion.save(update_fields=['estado'])
 
     return estancia
 

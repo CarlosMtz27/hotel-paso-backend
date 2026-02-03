@@ -5,7 +5,8 @@ from .views import (
     TipoHabitacionListAPIView,
     TipoHabitacionDetailAPIView,
     HabitacionListAPIView,
-    HabitacionDetailAPIView
+    HabitacionDetailAPIView,
+    MarcarHabitacionDisponibleAPIView,
 )
 
 urlpatterns = [
@@ -22,4 +23,8 @@ urlpatterns = [
 
     # Ejemplo: GET, PUT /api/habitaciones/1/
     path('<int:pk>/', HabitacionDetailAPIView.as_view(), name='habitaciones_detail'),
+
+    # Endpoint para marcar una habitación como disponible
+    # Ejemplo: POST /api/habitaciones/1/marcar-disponible/
+    path('<int:pk>/marcar-disponible/', MarcarHabitacionDisponibleAPIView.as_view(), name='habitacion-marcar-disponible'),
 ]

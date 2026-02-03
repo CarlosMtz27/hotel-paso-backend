@@ -12,8 +12,8 @@ from apps.turnos.models import Turno
 
 class MovimientoCajaListCreateAPIView(generics.ListCreateAPIView):
     """
-    - GET: Lista todos los movimientos de caja. (Solo Admins)
-    - POST: Registra la venta de un producto. (Admins, Empleados e Invitados con turno activo)
+    - GET: Lista todos los movimientos de caja. (Cualquier usuario autenticado)
+    - POST: Registra la venta de un producto. (Admins, Empleados e Invitados)
     """
     queryset = MovimientoCaja.objects.select_related('turno', 'estancia', 'producto').order_by('-fecha')
     filterset_fields = ['turno', 'tipo', 'metodo_pago', 'estancia']
@@ -31,11 +31,11 @@ class MovimientoCajaListCreateAPIView(generics.ListCreateAPIView):
     def get_permissions(self):
         """
         Define permisos específicos por acción.
-        - GET (listar): Solo los administradores pueden ver el historial completo de caja.
+        - GET (listar): Cualquier usuario autenticado puede ver el historial de caja.
         - POST (crear): Administradores, Empleados e Invitados pueden registrar una venta.
         """
         if self.request.method == 'GET':
-            return [IsAuthenticated(), IsAdminUser()]
+            return [IsAuthenticated()]
         
         # Para POST, se permite a cualquier usuario con rol (Admin, Empleado, Invitado).
         # IsEmpleado cubre a Admins y Empleados. IsOnlyInvitado cubre a los invitados.

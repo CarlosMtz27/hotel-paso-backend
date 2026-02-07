@@ -13,7 +13,7 @@ class UserSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = Usuario
-        fields = ('id', 'username', 'first_name', 'last_name', 'rol', 'is_active')
+        fields = ('id', 'username', 'first_name', 'last_name', 'email', 'rol', 'is_active', 'activo')
         read_only_fields = fields
 
 
@@ -84,3 +84,12 @@ class LoginInvitadoSerializer(serializers.Serializer):
             raise serializers.ValidationError("Código de administrador inválido")
 
         return datos
+
+class UserUpdateSerializer(serializers.ModelSerializer):
+    """
+    Serializador para actualizar usuarios existentes.
+    Permite modificar roles y estado activo.
+    """
+    class Meta:
+        model = Usuario
+        fields = ('username', 'first_name', 'last_name', 'email', 'rol', 'activo')

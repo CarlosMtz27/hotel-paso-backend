@@ -14,9 +14,19 @@ def iniciar_turno(*, usuario, tipo_turno, caja_inicial=0):
     Valida permisos y la unicidad del turno activo.
     """
 
-    # Regla: Solo puede existir un turno activo en todo el sistema a la vez.
-    if Turno.objects.filter(activo=True).exists():
-        raise ValidationError("Ya existe un turno activo")
+    # Regla: Un usuario no puede tener más de un turno activo.
+    if Turno.objects.filter(usuario=usuario, activo=True).exists():
+        raise ValidationError("Ya tienes un turno activo.")
+
+    # Regla: Permitir turnos simultáneos de Admin y Empleado.
+    # No permitir múltiples turnos de Empleados (ni Invitados).
+    if usuario.rol == "ADMIN":
+        if Turno.objects.filter(activo=True, usuario__rol="ADMIN").exists():
+            raise ValidationError("Ya existe un turno de Administrador activo.")
+    else:
+        # Empleados e Invitados
+        if Turno.objects.filter(activo=True, usuario__rol__in=["EMPLEADO", "INVITADO"]).exists():
+            raise ValidationError("Ya existe un turno de Empleado activo.")
 
     turno = Turno.objects.create(
         usuario=usuario,
@@ -35,14 +45,13 @@ def cerrar_turno_service(*, usuario, efectivo_reportado, sueldo):
     Orquesta las validaciones, el cálculo de totales y el cierre del turno.
     """
     try:
-        # La responsabilidad de encontrar el turno activo ahora reside en el servicio.
-        turno = Turno.objects.get(activo=True)
+        # Busca el turno activo específico del usuario.
+        turno = Turno.objects.get(activo=True, usuario=usuario)
     except Turno.DoesNotExist:
+        # Si no tiene turno propio, verificamos si hay algún turno activo para dar un mensaje claro.
+        if Turno.objects.filter(activo=True).exists():
+            raise ValidationError("Solo puedes cerrar tu propio turno.")
         raise ValidationError("No hay un turno activo para cerrar.")
-
-    # Regla: Un empleado solo puede cerrar el turno que él mismo abrió.
-    if turno.usuario != usuario:
-        raise ValidationError("Solo puedes cerrar tu propio turno.")
 
     # Regla: No se puede cerrar un turno que ya está cerrado.
     if not turno.activo:

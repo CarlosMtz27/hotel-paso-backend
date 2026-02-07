@@ -5,9 +5,10 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .serializers import LoginInvitadoSerializer, UserRegistrationSerializer, MyTokenObtainPairSerializer, UserSerializer
+from .serializers import LoginInvitadoSerializer, UserRegistrationSerializer, MyTokenObtainPairSerializer, UserSerializer, UserUpdateSerializer
 from apps.core.permissions import IsAdminUser
 from .services import login_invitado_service
+from .models import Usuario
 
 
 class MyTokenObtainPairView(TokenObtainPairView):
@@ -98,3 +99,26 @@ class CurrentUserAPIView(APIView):
         """
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
+
+class UserListAPIView(generics.ListAPIView):
+    """
+    Vista para listar todos los usuarios registrados en el sistema.
+    Solo accesible por administradores.
+    """
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    queryset = Usuario.objects.all().order_by('-date_joined')
+    serializer_class = UserSerializer
+
+class UserDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Vista para obtener, actualizar o eliminar un usuario específico.
+    Solo accesible por administradores.
+    """
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    queryset = Usuario.objects.all()
+
+    def get_serializer_class(self):
+        # Usamos un serializador diferente para escritura (actualización)
+        if self.request.method in ['PUT', 'PATCH']:
+            return UserUpdateSerializer
+        return UserSerializer

@@ -118,34 +118,20 @@ class TurnoActivoAPIView(APIView):
         """
         Busca y devuelve el turno activo.
         """
-        try:
-            # Se usa select_related para optimizar la consulta del usuario.
-            turno_activo = Turno.objects.select_related('usuario').get(activo=True)
-            # Usamos TurnoListSerializer que es más ligero que el de resumen.
-            serializer = TurnoListSerializer(turno_activo)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        except Turno.DoesNotExist:
-            # Si no se encuentra, se lanza una excepción que DRF convierte en 404.
+        # Buscamos todos los turnos activos
+        turnos_activos = Turno.objects.filter(activo=True).select_related('usuario')
+
+        if not turnos_activos.exists():
             raise NotFound(detail="No hay un turno activo.")
 
+        # Prioridad: Devolver el turno del usuario actual si tiene uno
+        turno_usuario = next((t for t in turnos_activos if t.usuario == request.user), None)
 
-class TurnoActivoAPIView(APIView):
-    """
-    Endpoint para obtener el turno activo.
-    - `GET`: Devuelve el turno activo si existe, de lo contrario 404.
-    """
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, *args, **kwargs):
-        """
-        Busca y devuelve el turno activo.
-        """
-        try:
-            # Se usa select_related para optimizar la consulta del usuario.
-            turno_activo = Turno.objects.select_related('usuario').get(activo=True)
-            # Usamos TurnoListSerializer que es más ligero que el de resumen.
-            serializer = TurnoListSerializer(turno_activo)
+        if turno_usuario:
+            serializer = TurnoListSerializer(turno_usuario)
             return Response(serializer.data, status=status.HTTP_200_OK)
-        except Turno.DoesNotExist:
-            # Si no se encuentra, se lanza una excepción que DRF convierte en 404.
-            raise NotFound(detail="No hay un turno activo.")
+
+        # Si el usuario no tiene turno, pero hay otros activos, devolvemos el primero.
+        serializer = TurnoListSerializer(turnos_activos.first())
+        return Response(serializer.data, status=status.HTTP_200_OK)
+

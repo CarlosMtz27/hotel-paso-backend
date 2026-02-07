@@ -3,7 +3,8 @@
 from django.urls import path
 from .views import (
     CurrentUserAPIView, LogoutAPIView, MyTokenObtainPairView,
-    UserRegistrationAPIView, VistaLoginInvitado
+    UserRegistrationAPIView, VistaLoginInvitado,
+    UserListAPIView, UserDetailAPIView
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -18,4 +19,7 @@ urlpatterns = [
     path("register/", UserRegistrationAPIView.as_view(), name="register"),
     # Endpoint para el login de invitados.
     path("login-invitado/", VistaLoginInvitado.as_view(), name="login_invitado"),
+    # Endpoints de gestión de usuarios (Admin)
+    path("users/", UserListAPIView.as_view(), name="user-list"),
+    path("users/<int:pk>/", UserDetailAPIView.as_view(), name="user-detail"),
 ]

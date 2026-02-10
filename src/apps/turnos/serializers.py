@@ -3,6 +3,9 @@ from .models import Turno
 from django.db.models import Sum
 from apps.caja.models import MovimientoCaja
 from apps.estancias.models import Estancia
+from apps.users.serializers import UserSerializer
+
+
 
 
 class TurnoListSerializer(serializers.ModelSerializer):
@@ -10,7 +13,7 @@ class TurnoListSerializer(serializers.ModelSerializer):
     Serializador de solo lectura para listar los turnos de forma resumida.
     Usado para el endpoint de listado y para devolver el objeto completo al crear.
     """
-    usuario = serializers.StringRelatedField(read_only=True)
+    usuario = UserSerializer(read_only=True)
 
     class Meta:
         model = Turno

@@ -3,7 +3,9 @@ from apps.estancias.models import Estancia
 from apps.caja.models import MovimientoCaja
 from apps.habitaciones.models import Habitacion
 from apps.tarifas.models import Tarifa
-from .models import Estancia
+from apps.habitaciones.serializers import HabitacionSerializer
+from apps.tarifas.serializers import TarifaSerializer
+from apps.turnos.serializers import TurnoListSerializer
 
 
 class AbrirEstanciaSerializer(serializers.Serializer):
@@ -67,13 +69,13 @@ class EstanciaDetalleSerializer(serializers.ModelSerializer):
     Serializador de solo lectura para devolver el estado completo y actualizado
     de una estancia después de una operación (abrir, cerrar, etc.).
     """
-    # Usamos  `StringRelatedField` para una respuesta más legible y amigable para el frontend.
-    habitacion = serializers.StringRelatedField()
+    # Usamos los serializadores completos para devolver objetos anidados.
+    habitacion = HabitacionSerializer(read_only=True)
     # Campo adicional para devolver solo el número de la habitación, útil para el frontend.
     habitacion_numero = serializers.IntegerField(source='habitacion.numero', read_only=True)
-    tarifa = serializers.StringRelatedField()
-    turno_inicio = serializers.StringRelatedField()
-    turno_cierre = serializers.StringRelatedField()
+    tarifa = TarifaSerializer(read_only=True)
+    turno_inicio = TurnoListSerializer(read_only=True)
+    turno_cierre = TurnoListSerializer(read_only=True)
 
     class Meta:
         model = Estancia
